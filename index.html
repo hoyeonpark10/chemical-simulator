@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>화학 반응 실험실</title>
+<style>
+  :root{
+    --bg:#F5F4EF;--surface:#FFFFFF;--ink:#1B2A2A;--muted:#6C776F;--accent:#0F766E;--accent-soft:#E2EFEC;
+    --border:#E4E3DB;--border-strong:#CFD0C6;--soft:#FAFAF7;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    --mono:ui-monospace,"SF Mono","Menlo","Consolas","Roboto Mono",monospace;
+  }
+  body.dark{
+    --bg:#141F1E;--surface:#1C2B29;--ink:#E7EDE9;--muted:#9DAFA8;--accent:#3FB8A6;--accent-soft:#243A37;
+    --border:#2B3D3A;--border-strong:#3B504C;--soft:#213230;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 60px}
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:22px}
+  header h1{font-size:24px;font-weight:600;margin:0;letter-spacing:-0.01em}
+  header .sub{font-size:13px;color:var(--muted)}
+  header .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 10px}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:18px}
+  .inrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:12px;color:var(--muted)}
+  .field input{font-family:var(--mono);font-size:16px;padding:9px 11px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);color:var(--ink);width:150px}
+  .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .plus{font-size:22px;color:var(--muted);padding-bottom:8px}
+  .run{font-size:15px;font-weight:600;color:#fff;background:var(--accent);border:none;border-radius:9px;padding:10px 22px;cursor:pointer}
+  .run:hover{background:#0c5f58}
+  .examples{margin-top:12px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .examples .lbl{font-size:12px;color:var(--muted);margin-right:2px;min-width:52px}
+  .examples button{font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:4px 9px;cursor:pointer;color:var(--ink)}
+  .examples button:hover{border-color:var(--accent);color:var(--accent)}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px}
+  #result{display:none}
+  .badge{display:inline-block;font-size:12px;font-weight:600;padding:5px 13px;border-radius:999px}
+  .eq{font-family:var(--mono);font-size:20px;margin:12px 0 4px;color:var(--ink);word-break:break-word}
+  .envline{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .infogrid{display:grid;grid-template-columns:1fr;gap:10px;font-size:14px}
+  .info b{font-weight:600}
+  .info .mono{font-family:var(--mono)}
+  .net{color:var(--accent);font-family:var(--mono)}
+  .spec{color:var(--muted)}
+  .idpanel{margin-top:14px;background:var(--soft);border:1px solid var(--border);border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+  .idrow{font-size:13px;display:flex;align-items:flex-start;gap:7px;flex-wrap:wrap}
+  .idrow b{font-weight:600}
+  .idswatch{display:inline-block;width:14px;height:14px;border-radius:4px;flex:0 0 auto;margin-top:2px}
+  .ionchip{font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--border-strong)}
+  .ionchip em{font-style:normal;color:var(--muted);font-size:11px}
+  .indtable{border-collapse:collapse;font-size:12px}
+  .indtable td{padding:5px 8px}
+  .phbar{position:relative;height:16px;border-radius:8px;background:linear-gradient(90deg,#d9483b,#e9d21f,#3aa03a,#2f6fd0,#5b3b8c)}
+  .phmark{position:absolute;top:-3px;width:2px;height:22px;background:var(--ink)}
+  .stage{display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;align-items:flex-start}
+  .vizcol{flex:1 1 340px;display:flex;justify-content:center;align-items:flex-start}
+  canvas{background:transparent}
+  .graphbox{flex:1 1 380px;min-width:300px}
+  .graphtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .graphtabs button{font-size:12px;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;padding:4px 10px;cursor:pointer;color:var(--muted)}
+  .graphtabs button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
+  .graphbox svg{display:block;max-width:100%}
+  .legend{font-size:11px;color:var(--muted);margin-top:4px;display:flex;flex-wrap:wrap;gap:9px 12px;max-width:380px}
+  .swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:middle}
+  .progrow{display:flex;align-items:center;gap:10px;margin-top:18px;max-width:460px}
+  .progrow span{font-size:12px;color:var(--muted)}
+  input[type=range]{flex:1;accent-color:var(--accent)}
+  .err{display:none;background:#FBEDE9;border:1px solid #E9C4B9;color:#8A3B22;border-radius:10px;padding:12px 15px;font-size:14px}
+  footer{font-size:12px;color:var(--muted);margin-top:26px;line-height:1.7}
+  @media(max-width:560px){.field input{width:120px}.eq{font-size:17px}}
+  .modetabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .modetab{font-size:14px;font-weight:600;padding:9px 20px;border-radius:10px;border:1px solid var(--border-strong);background:var(--surface);color:var(--muted);cursor:pointer}
+  .modetab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .modetab:hover{color:var(--ink)}
+  .modetab.on:hover{color:#fff}
+  .ghostbtn{font-size:14px;padding:10px 16px;border-radius:9px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
+  .ghostbtn:hover{border-color:var(--accent);color:var(--accent)}
+  .rxlist{margin-top:14px;border:1px solid var(--border);border-radius:11px;padding:12px 14px;background:var(--soft);max-height:300px;overflow-y:auto}
+  .rxgroup{margin-bottom:10px}
+  .rxgroup>.gl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .rxgroup .items{display:flex;flex-wrap:wrap;gap:6px}
+  .rxlist .items button{font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:4px 9px;cursor:pointer;color:var(--ink)}
+  .rxlist .items button:hover{border-color:var(--accent);color:var(--accent)}
+  .ptwrap{overflow-x:auto;padding-bottom:6px}
+  .ptable{display:grid;grid-template-columns:repeat(18,minmax(28px,1fr));gap:3px;min-width:600px}
+  .el{aspect-ratio:1/1;border:1px solid var(--border-strong);border-radius:5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface);color:var(--ink);padding:0;line-height:1.1}
+  .el .sym{font-weight:700;font-size:12px}
+  .el .num{font-size:8px;color:var(--muted)}
+  .el.metal{background:#e5f2ef}.el.nonmetal{background:#fbf0dc}.el.metalloid{background:#efe8f6}.el.noble{background:#eceef0}
+  body.dark .el.metal{background:#1f3733}body.dark .el.nonmetal{background:#3a3320}body.dark .el.metalloid{background:#322a3f}body.dark .el.noble{background:#28312f}
+  .el.sel{outline:3px solid var(--accent);outline-offset:-1px}
+  .el:hover{border-color:var(--accent)}
+  .ptlegend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin:8px 0}
+  .ptlegend span{display:inline-flex;align-items:center;gap:4px}
+  .ptlegend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .bondbadge{display:inline-block;font-size:12px;font-weight:600;padding:5px 13px;border-radius:999px}
+  .bondformula{font-family:var(--mono);font-size:22px;color:var(--ink);margin:8px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>화학 반응 실험실</h1>
+    <span class="sub">물질을 입력하면 반응을 예측하고 시각화합니다</span>
+    <span class="tag">prototype</span>
+    <button id="themeBtn" style="font-size:12px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);border-radius:8px;padding:4px 12px;cursor:pointer">다크 모드</button>
+  </header>
+
+  <nav class="modetabs" id="modetabs">
+    <button data-mode="reaction" class="modetab on">반응 예측</button>
+    <button data-mode="flame" class="modetab">불꽃 반응</button>
+    <button data-mode="elements" class="modetab">원소·결합</button>
+  </nav>
+
+  <div id="mode-reaction" class="mode">
+  <div class="panel">
+    <div class="inrow">
+      <div class="field" style="flex:1;min-width:220px"><label for="inReact">반응물 입력</label><input id="inReact" value="AgNO3 + NaCl" autocomplete="off" spellcheck="false" style="width:100%"></div>
+      <button class="run" id="runBtn">반응시키기</button>
+      <button id="listBtn" class="ghostbtn">반응 목록 ▾</button>
+    </div>
+    <div class="hint">반응물을 <b>+</b> 로 구분해 입력하세요 (예: <span style="font-family:var(--mono)">AgNO3 + NaCl</span>, <span style="font-family:var(--mono)">Zn + HCl</span>). 대소문자를 지키고, 한글 이름도 일부 인식합니다.</div>
+    <div id="rxlist" class="rxlist" style="display:none"></div>
+  </div>
+
+  <div class="err panel" id="errBox"></div>
+
+  <div class="panel" id="result">
+    <span class="badge" id="badge"></span>
+    <div class="eq" id="eq"></div>
+    <div class="envline" id="env"></div>
+    <div class="infogrid">
+      <div class="info"><b>이온화</b> <span id="ionize" class="mono"></span></div>
+      <div class="info"><b>알짜 이온 반응식 (실제 참여)</b> <span id="net" class="net"></span></div>
+      <div class="info"><b>구경꾼 이온</b> <span id="spec" class="spec"></span></div>
+    </div>
+    <div class="idpanel" id="idpanel"></div>
+    <div class="idpanel" id="redoxpanel" style="display:none"></div>
+    <div class="idpanel" id="indicatorpanel" style="display:none"></div>
+    <div class="stage">
+      <div class="vizcol"><canvas id="beaker" width="380" height="300" style="max-width:100%;height:auto"></canvas></div>
+      <div class="graphbox">
+        <div class="graphtabs" id="graphtabs"></div>
+        <svg id="graph" width="400" height="240" role="img" aria-label="반응 그래프" style="max-width:100%;height:auto"></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+    <div class="progrow">
+      <span id="proglabel">반응 진행</span>
+      <input type="range" id="prog" min="0" max="100" value="0">
+      <span id="pval" style="min-width:36px;text-align:right;color:var(--ink)">0%</span>
+    </div>
+  </div>
+
+  </div>
+  <div id="mode-flame" class="mode" style="display:none">
+  <div class="panel" id="flamepanel">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">불꽃 반응</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px">금속(또는 그 화합물)을 불꽃에 넣으면 금속 종류에 따라 특유의 색이 나타납니다. 금속을 골라 보세요.</div>
+    <div class="examples" style="margin-top:0"><span class="lbl">금속</span>
+      <button data-m="Li">리튬 Li</button><button data-m="Na">나트륨 Na</button><button data-m="K">칼륨 K</button>
+      <button data-m="Ca">칼슘 Ca</button><button data-m="Sr">스트론튬 Sr</button><button data-m="Ba">바륨 Ba</button><button data-m="Cu">구리 Cu</button>
+    </div>
+    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:14px">
+      <svg id="flamesvg" width="120" height="160" viewBox="0 0 120 160" aria-label="불꽃 색"></svg>
+      <div id="flameinfo" style="font-size:14px"></div>
+    </div>
+  </div>
+
+  </div>
+  <div id="mode-elements" class="mode" style="display:none">
+  <div class="panel" id="ptpanel">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">원소로 화학식 만들기 (결합 예측)</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px">주기율표에서 원소를 2~3개 클릭하면, 금속·비금속을 판별해 결합 종류를 알려주고 만들어지는 화학식을 보여줍니다. 같은 원소를 다시 누르면 선택이 해제됩니다.</div>
+    <div class="ptwrap"><div class="ptable" id="ptable"></div></div>
+    <div class="ptlegend">
+      <span><i style="background:#e5f2ef;border:1px solid #cfd0c6"></i>금속</span>
+      <span><i style="background:#fbf0dc;border:1px solid #cfd0c6"></i>비금속</span>
+      <span><i style="background:#efe8f6;border:1px solid #cfd0c6"></i>준금속</span>
+      <span><i style="background:#eceef0;border:1px solid #cfd0c6"></i>비활성 기체</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+      <button id="ptReset" class="ghostbtn" style="font-size:13px;padding:6px 14px">선택 초기화</button>
+      <span id="ptcount" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div id="ptresult" style="margin-top:10px"></div>
+  </div>
+
+  </div>
+
+  <footer>범위: 통합과학 수준의 반응(앙금·중화·산화·환원, 할로젠 치환, 금속+물, 연소, 고온 산화·환원, 부식, 불꽃 반응)을 다룹니다. 온도·중화열 그래프와 무대(불꽃·고온·표면) 연출은 경향을 보여주는 개념도이며, 실제 변화량·조건은 물질의 양·농도·온도에 따라 달라집니다. 반응 속도·촉매·평형은 다루지 않습니다.</footer>
+</div>
+
+<script>
+/* ================= 화학 엔진 ================= */
+const CATIONS={
+  H:{ch:1,el:{H:1},sym:'H',disp:'H'},Li:{ch:1,el:{Li:1},sym:'Li',disp:'Li'},Na:{ch:1,el:{Na:1},sym:'Na',disp:'Na'},K:{ch:1,el:{K:1},sym:'K',disp:'K'},Rb:{ch:1,el:{Rb:1},sym:'Rb',disp:'Rb'},Cs:{ch:1,el:{Cs:1},sym:'Cs',disp:'Cs'},
+  Ag:{ch:1,el:{Ag:1},sym:'Ag',disp:'Ag'},NH4:{ch:1,el:{N:1,H:4},sym:'NH4',disp:'NH₄'},
+  Ca:{ch:2,el:{Ca:1},sym:'Ca',disp:'Ca'},Mg:{ch:2,el:{Mg:1},sym:'Mg',disp:'Mg'},Ba:{ch:2,el:{Ba:1},sym:'Ba',disp:'Ba'},Sr:{ch:2,el:{Sr:1},sym:'Sr',disp:'Sr'},
+  Cu:{ch:2,el:{Cu:1},sym:'Cu',disp:'Cu'},Zn:{ch:2,el:{Zn:1},sym:'Zn',disp:'Zn'},Mn:{ch:2,el:{Mn:1},sym:'Mn',disp:'Mn'},Ni:{ch:2,el:{Ni:1},sym:'Ni',disp:'Ni'},Sn:{ch:2,el:{Sn:1},sym:'Sn',disp:'Sn'},Co:{ch:2,el:{Co:1},sym:'Co',disp:'Co'},
+  Fe2:{ch:2,el:{Fe:1},sym:'Fe',disp:'Fe'},Fe3:{ch:3,el:{Fe:1},sym:'Fe',disp:'Fe'},Cr3:{ch:3,el:{Cr:1},sym:'Cr',disp:'Cr'},
+  Pb:{ch:2,el:{Pb:1},sym:'Pb',disp:'Pb'},Al:{ch:3,el:{Al:1},sym:'Al',disp:'Al'},
+};
+const ANIONS={
+  Cl:{ch:1,el:{Cl:1},disp:'Cl',poly:false},Br:{ch:1,el:{Br:1},disp:'Br',poly:false},I:{ch:1,el:{I:1},disp:'I',poly:false},F:{ch:1,el:{F:1},disp:'F',poly:false},
+  OH:{ch:1,el:{O:1,H:1},disp:'OH',poly:true},NO3:{ch:1,el:{N:1,O:3},disp:'NO₃',poly:true},NO2:{ch:1,el:{N:1,O:2},disp:'NO₂',poly:true},ClO3:{ch:1,el:{Cl:1,O:3},disp:'ClO₃',poly:true},MnO4:{ch:1,el:{Mn:1,O:4},disp:'MnO₄',poly:true},
+  SO4:{ch:2,el:{S:1,O:4},disp:'SO₄',poly:true},SO3:{ch:2,el:{S:1,O:3},disp:'SO₃',poly:true},HSO4:{ch:1,el:{H:1,S:1,O:4},disp:'HSO₄',poly:true},CO3:{ch:2,el:{C:1,O:3},disp:'CO₃',poly:true},HCO3:{ch:1,el:{H:1,C:1,O:3},disp:'HCO₃',poly:true},
+  PO4:{ch:3,el:{P:1,O:4},disp:'PO₄',poly:true},C2O4:{ch:2,el:{C:2,O:4},disp:'C₂O₄',poly:true},S:{ch:2,el:{S:1},disp:'S',poly:false},CrO4:{ch:2,el:{Cr:1,O:4},disp:'CrO₄',poly:true},
+};
+const ACTIVITY=['Cs','Rb','Li','K','Ba','Sr','Ca','Na','Mg','Al','Mn','Zn','Cr','Fe','Co','Ni','Sn','Pb','H','Cu','Hg','Ag','Pt','Au'];
+const METAL_FORMS={Li:'Li',Rb:'Rb',Cs:'Cs',Zn:'Zn',Mg:'Mg',Fe:'Fe2',Al:'Al',Cu:'Cu',Ca:'Ca',Na:'Na',K:'K',Ba:'Ba',Sr:'Sr',Mn:'Mn',Ni:'Ni',Sn:'Sn',Co:'Co',Cr:'Cr3',Ag:'Ag',Pb:'Pb'};
+const MOL={H2O:{H:2,O:1},H2:{H:2},O2:{O:2},N2:{N:2},CO2:{C:1,O:2},CO:{C:1,O:1},C:{C:1},S:{S:1},Cl2:{Cl:2},Br2:{Br:2},I2:{I:2},CuO:{Cu:1,O:1},Fe2O3:{Fe:2,O:3},Al2O3:{Al:2,O:3},MgO:{Mg:1,O:1},SO2:{S:1,O:2},CH4:{C:1,H:4},C3H8:{C:3,H:8}};
+const HALOGENS=['Cl2','Br2','I2'];
+const FLAME_TEST={Li:['리튬','빨간색','#e2402f'],Na:['나트륨','노란색','#f0c419'],K:['칼륨','보라색','#9b59b6'],Rb:['루비듐','붉은보라','#c0392b'],Cs:['세슘','파란보라','#5b6fd6'],Ca:['칼슘','주홍색','#e2622f'],Sr:['스트론튬','진홍색','#d63031'],Ba:['바륨','황록색','#8fbf3f'],Cu:['구리','청록색','#1abc9c']};
+const KOR={'염화나트륨':'NaCl','질산은':'AgNO3','수산화나트륨':'NaOH','황산구리':'CuSO4','염산':'HCl','황산':'H2SO4','질산':'HNO3','인산':'H3PO4','탄산칼슘':'CaCO3','아이오딘화칼륨':'KI','수산화칼륨':'KOH','수산화칼슘':'Ca(OH)2','염화바륨':'BaCl2','황산나트륨':'Na2SO4','탄산나트륨':'Na2CO3','탄산수소나트륨':'NaHCO3','베이킹소다':'NaHCO3','염화칼슘':'CaCl2','염화칼륨':'KCl','아연':'Zn','마그네슘':'Mg','철':'Fe','구리':'Cu','알루미늄':'Al','나트륨':'Na','칼륨':'K','칼슘':'Ca','리튬':'Li'};
+const ION_COLOR={'c:Cu':['파란색','#3a7bd5'],'c:Fe3':['황갈색','#c98a2b'],'c:Fe2':['연녹색','#8fbf8f'],'c:Co':['분홍색','#e08aa6'],'c:Cr3':['초록색','#4a9e6a'],'c:Ni':['연녹색','#7fbf9f'],'a:CrO4':['노란색','#dcc21e'],'a:MnO4':['보라색','#8e44ad']};
+const COLORLESS=['무색','#cfd6dc'];
+const ionColor=k=>ION_COLOR[k]||COLORLESS;
+const INDICATORS=[
+  {name:'리트머스 종이','산성':['붉은색','#d9483b'],'중성':['보라색','#8a6fb0'],'염기성':['푸른색','#3f6fd0']},
+  {name:'BTB 용액','산성':['노란색','#e9d21f'],'중성':['초록색','#3aa03a'],'염기성':['파란색','#2f6fd0']},
+  {name:'페놀프탈레인','산성':['무색','#eef1f3'],'중성':['무색','#eef1f3'],'염기성':['붉은색(분홍)','#e0559a']},
+  {name:'메틸오렌지','산성':['붉은색','#d9483b'],'중성':['주황색','#e08a1e'],'염기성':['노란색','#e9d21f']},
+];
+const USE_BY_PAIR={
+  'AgNO3|NaCl':'물속 염화 이온(Cl⁻) 검출에 쓰여. 염화은은 빛에 반응해서 흑백 사진 필름·인화지에도 이용됐어.',
+  'AgNO3|KI':'선명한 노란색 앙금이라 아이오딘화 이온 검출·정성분석에 쓰여.',
+  'BaCl2|Na2SO4':'황산 이온(SO₄²⁻) 검출에 쓰여. 황산바륨은 X선을 잘 통과시키지 않아 위·장 X선 촬영의 조영제로 이용돼.',
+  'Pb(NO3)2|KI':'선명한 노란색 앙금이라 화학 실험·정성분석의 대표 예로 자주 쓰여.',
+  'CuSO4|NaOH':'구리 이온 검출에 쓰이고, 수산화구리는 청색 안료나 촉매로 이용돼.',
+  'FeCl3|NaOH':'철 이온 검출에 쓰이고, 수산화철은 정수 과정에서 불순물을 엉기게 하는 응집제로 활용돼.',
+  'CaCO3|HCl':'제산제(탄산칼슘)가 위산을 중화하며 CO₂를 내는 원리야. 석회암이 산성 물에 녹아 석회 동굴이 만들어지는 원리이기도 해.',
+  'HCl|NaOH':'중화 반응의 대표 예야. 위산 과다에 제산제를 먹거나, 산성화된 토양·호수에 석회를 뿌려 중화하는 데 쓰여.',
+  'H2SO4|KOH':'산·염기를 중화해 염과 물을 만드는 원리로, 폐수 처리에서 산이나 염기를 중화하는 데 쓰여.',
+  'HNO3|KOH':'산·염기 중화의 예로, 비료 원료가 되는 질산칼륨(염)을 얻는 반응이기도 해.',
+  'HCl|Ca(OH)2':'산성을 염기(소석회)로 중화하는 반응으로, 토양·폐수 중화에 쓰여.',
+  'Zn|HCl':'실험실에서 수소 기체를 만드는 방법이야. 금속이 산에 녹는 부식의 원리이기도 해.',
+  'Mg|HCl':'수소 기체 발생 반응으로, 마그네슘의 큰 반응성을 보여주는 예야.',
+  'Fe|HCl':'수소 발생 반응이자, 철이 산에 부식되는 원리를 보여줘.',
+  'Al|HCl':'수소 발생 반응. 알루미늄이 산에 녹는 성질을 보여줘.',
+  'Fe|CuSO4':'철보다 반응성이 작은 구리를 회수하는 습식 제련과 금속 도금의 원리야. 이온화 경향 차이를 이용한 전지에도 응용돼.',
+  'Zn|CuSO4':'아연이 구리를 밀어내는 치환 반응으로, 다니엘 전지 등 화학 전지의 기본 원리야.',
+  'Cu|AgNO3':'은이 석출되는 반응이라 은도금·은거울 반응의 기초 원리가 돼.',
+  'NaHCO3|HCl':'베이킹소다(탄산수소나트륨)와 산이 만나 CO₂가 발생해. 발포·청소·제빵의 원리야.',
+  'CaCl2|NaF':'불용성 CaF₂가 생기는 반응. 플루오린화물은 충치 예방(치약)과 관련이 있어.',
+  'H3PO4|NaOH':'인산과 염기의 중화로, 인산염(비료·세제 성분)을 얻는 반응이야.',
+};
+const USE_BY_TYPE={'앙금':'특정 이온을 검출(정성분석)하거나 물질을 분리·정제하는 데 활용돼.','중화':'산과 염기를 서로 상쇄시켜 안전하게 만드는 원리로, 제산제·토양 개량·폐수 처리 등에 쓰여.','산화환원':'전자의 이동을 이용하는 반응으로 전지·금속 제련·도금·부식 등 곳곳에 쓰여.'};
+const useFor=(a,b,theme)=>USE_BY_PAIR[a+'|'+b]||USE_BY_PAIR[b+'|'+a]||USE_BY_TYPE[theme]||'';
+
+const gcd=(a,b)=>b?gcd(b,Math.abs(a%b)):Math.abs(a);
+const compElements=(m,n)=>{const o={};for(const k in m)o[k]=m[k]*n;return o;};
+const mergeEl=(a,b)=>{const o={...a};for(const k in b)o[k]=(o[k]||0)+b[k];return o;};
+function compoundFormula(ck,ak){const c=CATIONS[ck],a=ANIONS[ak];const g=gcd(c.ch,a.ch),nc=a.ch/g,na=c.ch/g;
+  let cp;if(c.sym.length>2&&nc>1)cp='('+c.sym+')'+nc;else cp=c.sym+(nc>1?nc:'');
+  const plain=a.disp.replace(/[₀-₉]/g,d=>'₀₁₂₃₄₅₆₇₈₉'.indexOf(d));let ap;if(a.poly&&na>1)ap='('+plain+')'+na;else ap=plain+(na>1?na:'');
+  return cp+ap;}
+function compoundComp(ck,ak){const c=CATIONS[ck],a=ANIONS[ak];const g=gcd(c.ch,a.ch),nc=a.ch/g,na=c.ch/g;return mergeEl(compElements(c.el,nc),compElements(a.el,na));}
+const LOOKUP={};for(const ck in CATIONS)for(const ak in ANIONS){if(ck==='H'&&ak==='OH')continue;const f=compoundFormula(ck,ak);if(!(f in LOOKUP))LOOKUP[f]={catKey:ck,anKey:ak};}
+const normalizeDigits=s=>s.replace(/[₀-₉]/g,d=>'₀₁₂₃₄₅₆₇₈₉'.indexOf(d));
+function recognize(raw){let s=(raw||'').trim();if(KOR[s])s=KOR[s];s=normalizeDigits(s).replace(/\s/g,'');
+  if(!s)return {type:'empty'};if(METAL_FORMS[s])return {type:'metal',sym:s,cat:METAL_FORMS[s],name:s};
+  if(LOOKUP[s]){const {catKey,anKey}=LOOKUP[s];return {type:'compound',catKey,anKey,name:s};}
+  if(MOL[s])return {type:'molecule',name:s,comp:MOL[s],halogen:HALOGENS.includes(s)};
+  return {type:'unknown',name:s};}
+function soluble(ck,ak){
+  if(ak==='NO3'||ak==='NO2'||ak==='HCO3'||ak==='HSO4'||ak==='ClO3'||ak==='MnO4')return true;
+  if(ck==='Na'||ck==='K'||ck==='NH4'||ck==='H'||ck==='Li'||ck==='Rb'||ck==='Cs')return true;
+  if(ak==='Cl'||ak==='Br'||ak==='I')return !(ck==='Ag'||ck==='Pb');
+  if(ak==='F')return !(ck==='Ca'||ck==='Mg'||ck==='Ba'||ck==='Sr'||ck==='Pb');
+  if(ak==='SO4')return !(ck==='Ba'||ck==='Pb'||ck==='Sr');
+  if(ak==='OH')return (ck==='Ba'||ck==='Sr');
+  if(ak==='CO3'||ak==='CrO4'||ak==='S'||ak==='PO4'||ak==='SO3'||ak==='C2O4')return false;
+  return true;}
+const PRECIP_COLOR={'Ag,Cl':['흰색','#f0f0f0'],'Ag,Br':['연노란색','#efe6a8'],'Ag,I':['노란색','#f2dd4a'],'Ag,CrO4':['적갈색','#b5442e'],'Ag,CO3':['연노란색','#e8dd8c'],'Ag,S':['검은색','#333333'],'Ag,PO4':['노란색','#e8d24a'],'Pb,Cl':['흰색','#f0f0f0'],'Pb,I':['노란색','#f2dd4a'],'Pb,SO4':['흰색','#f0f0f0'],'Pb,CrO4':['노란색','#efc93a'],'Pb,S':['검은색','#333333'],'Ba,SO4':['흰색','#f0f0f0'],'Ba,CO3':['흰색','#f0f0f0'],'Ba,CrO4':['노란색','#efc93a'],'Ca,CO3':['흰색','#f0f0f0'],'Cu,OH':['파란색','#3a7bd5'],'Cu,CO3':['청록색','#3aa091'],'Cu,S':['검은색','#333333'],'Cu,PO4':['하늘색','#7fb0d8'],'Fe3,OH':['붉은갈색','#9c4a28'],'Fe2,OH':['연녹색','#8fbf8f'],'Fe2,S':['검은색','#333333'],'Fe3,PO4':['연노란색','#e6d68a'],'Mg,OH':['흰색','#f0f0f0'],'Zn,OH':['흰색','#f0f0f0'],'Zn,S':['흰색','#f0f0f0'],'Al,OH':['흰색','#f0f0f0'],'Ni,OH':['연녹색','#7fbf9f'],'Ni,CO3':['연녹색','#8fc7a0'],'Ni,S':['검은색','#333333'],'Mn,OH':['연갈색','#cbb79c'],'Mn,S':['살구색','#e0a891'],'Sr,SO4':['흰색','#f0f0f0'],'Sr,CO3':['흰색','#f0f0f0'],'Co,OH':['분홍색','#e39ab0'],'Co,CO3':['분홍색','#e6a6bb'],'Co,S':['검은색','#333333'],'Cr3,OH':['회녹색','#6f8f6f'],'Cr3,PO4':['연녹색','#9db98f'],'Ca,C2O4':['흰색','#f0f0f0'],'Ag,C2O4':['흰색','#f0f0f0'],'Mn,CO3':['연분홍','#e6cdd0']};
+const precipColor=(ck,ak)=>PRECIP_COLOR[ck+','+ak]||['흰색','#eeeeee'];
+function balance(comps,rCount){const n=comps.length;const els=[...new Set(comps.flatMap(c=>Object.keys(c)))];
+  const idx=new Array(n).fill(1);let best=null,bestSum=1e9;
+  while(true){let ok=true;for(const e of els){let l=0,r=0;for(let i=0;i<n;i++){const v=(comps[i][e]||0)*idx[i];if(i<rCount)l+=v;else r+=v;}if(l!==r){ok=false;break;}}
+    if(ok){const s=idx.reduce((a,b)=>a+b,0);if(s<bestSum){bestSum=s;best=idx.slice();}}
+    let k=n-1;while(k>=0){idx[k]++;if(idx[k]<=8)break;idx[k]=1;k--;}if(k<0)break;}
+  if(best){const g=best.reduce((a,b)=>gcd(a,b));return best.map(x=>x/g);}return null;}
+const supCharge=ch=>{const n=Math.abs(ch);return (({1:'',2:'²',3:'³'})[n]||'')+(ch>0?'⁺':'⁻');};
+const catDisp=ck=>CATIONS[ck].disp+supCharge(CATIONS[ck].ch);
+const anDisp=ak=>ANIONS[ak].disp+supCharge(-ANIONS[ak].ch);
+const subscriptify=f=>f.replace(/([A-Za-z\)])(\d+)/g,(m,a,d)=>a+d.replace(/\d/g,x=>'₀₁₂₃₄₅₆₇₈₉'[x]));
+const hexA=(hex,a)=>{const h=hex.replace('#','');return `rgba(${parseInt(h.substr(0,2),16)},${parseInt(h.substr(2,2),16)},${parseInt(h.substr(4,2),16)},${a})`;};
+
+function predict(rawA,rawB){
+  const X=recognize(rawA),Y=recognize(rawB);
+  for(const c of [X,Y]){if(c.type==='empty')return {ok:false,msg:'두 물질을 모두 입력해줘.'};
+    if(c.type==='unknown')return {ok:false,msg:`"${c.name}" 은(는) 이 프로토타입이 아는 물질이 아니야. 대소문자를 확인하거나 예시를 참고해줘.`};}
+  const _db=matchDB(X,Y);if(_db)return _db;
+  const isAcid=c=>c.type==='compound'&&c.catKey==='H',isBase=c=>c.type==='compound'&&c.anKey==='OH',
+    isSalt=c=>c.type==='compound'&&c.catKey!=='H'&&c.anKey!=='OH',isCarb=c=>c.type==='compound'&&(c.anKey==='CO3'||c.anKey==='HCO3');
+  // 할로젠 치환
+  let hx=null,hsalt=null;
+  if(X.type==='molecule'&&X.halogen&&isSalt(Y)){hx=X;hsalt=Y;}else if(Y.type==='molecule'&&Y.halogen&&isSalt(X)){hx=Y;hsalt=X;}
+  if(hx&&hsalt){
+    const RANK={Cl:3,Br:2,I:1},MOLH={Cl:'Cl2',Br:'Br2',I:'I2'},AN={Cl2:'Cl',Br2:'Br',I2:'I'},INR={Cl2:3,Br2:2,I2:1};
+    const saltAn=hsalt.anKey;
+    if(RANK[saltAn]){
+      if(INR[hx.name]>RANK[saltAn]){
+        const disMol=MOLH[saltAn];
+        const colName={Br2:'갈색',I2:'보라색(갈색)'}[disMol]||'특유의 색';
+        const liqPair={Br2:[[224,232,236],[150,90,40]],I2:[[224,232,236],[110,70,140]]}[disMol];
+        return finalize({theme:'산화환원',type:'산화·환원 (할로젠 치환)',heatDelta:8,colorReason:`반응성이 큰 ${subscriptify(hx.name)}이(가) ${subscriptify(disMol)}을(를) 밀어내 용액이 ${colName}으로 변함`,vis:{k:'colorchange',c:'#c0c0c0',liq0:liqPair?liqPair[0]:null,liq1:liqPair?liqPair[1]:null},
+          redox:{oxidized:{sp:`${anDisp(saltAn)}`,change:'-1 → 0',note:`전자를 잃고 ${subscriptify(disMol)}이 됨`},reduced:{sp:subscriptify(hx.name),change:'0 → -1',note:'전자를 얻어 음이온이 됨'},reducer:`${hsalt.name} (자신이 산화됨)`,oxidizer:`${subscriptify(hx.name)} (자신이 환원됨)`}},
+          [molecSp(hx.name),compSp(hsalt.catKey,hsalt.anKey)],[compSp(hsalt.catKey,AN[hx.name]),molecSp(disMol)]);
+      }
+      return {ok:false,msg:`${subscriptify(hx.name)}은(는) ${anDisp(saltAn)}보다 반응성이 작아서 치환이 일어나지 않아 (반응 없음).`};
+    }
+  }
+  // 금속 + 물
+  let mw=null;
+  if(X.type==='metal'&&Y.type==='molecule'&&Y.name==='H2O'){mw=X;}else if(Y.type==='metal'&&X.type==='molecule'&&X.name==='H2O'){mw=Y;}
+  if(mw){
+    if(['Li','K','Na','Ca','Ba','Sr','Rb','Cs'].includes(mw.sym)){
+      const hyd=compSp(mw.cat,'OH');hyd.soluble=true;hyd.mark='';
+      return finalize({theme:'산화환원',type:'산화·환원 (금속 + 물)',heatDelta:16,colorReason:'금속이 물과 반응해 염기성 수용액이 됨 (페놀프탈레인이 붉게 변함)',vis:{k:'gas',c:'#cfe4ff'},
+        redox:{oxidized:{sp:mw.name,change:`0 → +${CATIONS[mw.cat].ch}`,note:`전자 ${CATIONS[mw.cat].ch}개를 잃음`},reduced:{sp:'H₂O의 H',change:'+1 → 0',note:'전자를 얻어 H₂ 기체가 됨'},reducer:`${mw.name} (자신이 산화됨)`,oxidizer:'H₂O (자신이 환원됨)'}},
+        [metalSp(mw),molSp('H2O')],[hyd,gasSp('H2','↑')]);
+    }
+    return {ok:false,msg:`${mw.name}은(는) 찬물과는 거의 반응하지 않아 (반응 없음).`};
+  }
+  let m=null,acid=null;
+  if(X.type==='metal'&&isAcid(Y)){m=X;acid=Y;}else if(Y.type==='metal'&&isAcid(X)){m=Y;acid=X;}
+  if(m&&acid){
+    if(ACTIVITY.indexOf(m.sym)<ACTIVITY.indexOf('H'))
+      return finalize({theme:'산화환원',type:'산화·환원 (금속 + 산)',heatDelta:15,colorReason:null,vis:{k:'gas',c:'#cfe4ff'},
+        redox:{oxidized:{sp:m.name,change:`0 → +${CATIONS[m.cat].ch}`,note:`전자 ${CATIONS[m.cat].ch}개를 잃음`},reduced:{sp:'H⁺',change:'+1 → 0',note:'전자를 얻어 H₂ 기체가 됨'},reducer:`${m.name} (자신이 산화됨)`,oxidizer:`${acid.name}의 H⁺ (자신이 환원됨)`}},
+        [metalSp(m),compSp(acid.catKey,acid.anKey)],[compSp(m.cat,acid.anKey),gasSp('H2','↑')]);
+    return {ok:false,msg:`${m.name}은(는) 이온화 경향이 수소보다 작아서 산과 반응하지 않아 (반응 없음).`};
+  }
+  let mm=null,salt=null;
+  if(X.type==='metal'&&isSalt(Y)){mm=X;salt=Y;}else if(Y.type==='metal'&&isSalt(X)){mm=Y;salt=X;}
+  if(mm&&salt){
+    const sM=CATIONS[salt.catKey].sym;
+    if(ACTIVITY.indexOf(mm.sym)>-1&&ACTIVITY.indexOf(sM)>-1&&ACTIVITY.indexOf(mm.sym)<ACTIVITY.indexOf(sM)){
+      const dep=sM,depCol=dep==='Cu'?'#b87333':dep==='Ag'?'#d9d9d9':dep==='Pb'?'#9a9a9a':'#c0c0c0';
+      let liq0=[200,210,220],liq1=[195,205,200],reason=`반응성이 큰 ${mm.name}이(가) 이온으로 녹고, 반응성이 작은 ${dep}이(가) 금속으로 석출됨`;
+      if(salt.catKey==='Cu'){liq0=[90,150,215];liq1=[205,216,208];reason='파란색 Cu²⁺ 이온이 반응으로 줄어들어 용액의 파란색이 점점 옅어짐';}
+      else if(mm.cat==='Cu'){liq0=[205,212,216];liq1=[90,150,215];reason='반응으로 Cu²⁺ 이온이 생겨 무색 용액이 파란색으로 변함';}
+      return finalize({theme:'산화환원',type:'산화·환원 (금속 치환)',heatDelta:14,colorReason:reason,vis:{k:'displace',c:depCol,liq0,liq1},
+        redox:{oxidized:{sp:mm.name,change:`0 → +${CATIONS[mm.cat].ch}`,note:`전자 ${CATIONS[mm.cat].ch}개를 잃음`},reduced:{sp:catDisp(salt.catKey),change:`+${CATIONS[salt.catKey].ch} → 0`,note:`전자를 얻어 ${dep} 금속으로 석출됨`},reducer:`${mm.name} (자신이 산화됨)`,oxidizer:`${salt.name}의 ${catDisp(salt.catKey)} (자신이 환원됨)`}},
+        [metalSp(mm),compSp(salt.catKey,salt.anKey)],[compSp(mm.cat,salt.anKey),metalSp({sym:dep,cat:dep,name:dep})]);
+    }
+    return {ok:false,msg:`${mm.name}은(는) ${sM}보다 이온화 경향이 작아서 치환 반응이 일어나지 않아 (반응 없음).`};
+  }
+  if(X.type==='compound'&&Y.type==='compound'){
+    if((isAcid(X)&&isBase(Y))||(isAcid(Y)&&isBase(X))){
+      const A=isAcid(X)?X:Y,B=isBase(X)?X:Y;
+      return finalize({theme:'중화',type:'중화',heatDelta:15,colorReason:'지시약(페놀프탈레인)이 산성에서 무색, 염기성에서 분홍색으로 변함 (용액 자체는 대부분 무색)',vis:{k:'neutral',liq0:[190,210,235],liq1:[230,140,175]}},
+        [compSp(A.catKey,A.anKey),compSp(B.catKey,B.anKey)],[compSp(B.catKey,A.anKey),molSp('H2O')]);
+    }
+    if((isAcid(X)&&isCarb(Y))||(isAcid(Y)&&isCarb(X))){
+      const A=isAcid(X)?X:Y,C=isCarb(X)?X:Y;
+      return finalize({theme:'중화',type:'중화 (기체 발생)',heatDelta:12,colorReason:null,vis:{k:'gas',c:'#e0e0e0'}},
+        [compSp(C.catKey,C.anKey),compSp(A.catKey,A.anKey)],[compSp(C.catKey,A.anKey),molSp('H2O'),gasSp('CO2','↑')]);
+    }
+    const p1=[X.catKey,Y.anKey],p2=[Y.catKey,X.anKey];let precip=null;
+    for(const [ck,ak] of [p1,p2]) if(!soluble(ck,ak)) precip=[ck,ak];
+    if(precip){
+      let liq0=null,liq1=null,reason=null;
+      if(precip[0]==='Cu'){liq0=[90,150,215];liq1=[210,220,225];reason='파란색 Cu²⁺ 이온이 앙금으로 빠져나가 용액의 파란색이 옅어짐';}
+      else if(precip[0]==='Fe3'){liq0=[201,150,70];liq1=[210,220,225];reason='황갈색 Fe³⁺ 이온이 앙금으로 빠져나가 용액 색이 옅어짐';}
+      else if(precip[0]==='Fe2'){liq0=[150,191,143];liq1=[210,220,225];reason='연녹색 Fe²⁺ 이온이 앙금으로 빠져나가 용액 색이 옅어짐';}
+      return finalize({theme:'앙금',type:'앙금 생성',heatDelta:5,colorReason:reason,vis:{k:'precip',c:precipColor(precip[0],precip[1])[1],liq0,liq1}},
+        [compSp(X.catKey,X.anKey),compSp(Y.catKey,Y.anKey)],[compSp(p1[0],p1[1]),compSp(p2[0],p2[1])]);
+    }
+    return {ok:false,msg:'생성물이 모두 물에 녹아서 알짜 반응이 일어나지 않아 (구경꾼 이온만 존재, 반응 없음).'};
+  }
+  return {ok:false,msg:'이 조합은 이 프로토타입의 범위(수용액 앙금·중화·산화환원) 밖이야.'};
+}
+function compSp(ck,ak){const sol=soluble(ck,ak);return {stype:'compound',catKey:ck,anKey:ak,name:compoundFormula(ck,ak),comp:compoundComp(ck,ak),soluble:sol,mark:sol?'':'↓'};}
+function metalSp(m){return {stype:'metal',sym:m.sym,name:m.sym,comp:{[m.sym]:1},mark:''};}
+function molSp(name){return {stype:'mol',name,comp:MOL[name],mark:''};}
+function gasSp(name,mark){return {stype:'mol',name,comp:MOL[name],mark};}
+function molecSp(name,mark){return {stype:'mol',name,comp:MOL[name],mark:mark||''};}
+
+/* 비수용액 반응 DB: 연소 · 고온 산화·환원 · 부식 (미리 정의된 대표 반응) */
+const REACTION_DB=[
+  {match:['CH4','O2'],theme:'산화환원',type:'연소',stage:'flame',gases:['CO2','H2O'],heatDelta:30,flame:{outer:'#ff8c1a',inner:'#ffd24a'},
+   species:[['CH4',1,'r'],['O2',2,'r'],['CO2',1,'p'],['H2O',2,'p']],
+   redox:{oxidized:{sp:'CH₄ (연료)',change:'산소와 결합',note:'산소를 얻음 = 산화'},reduced:{sp:'O₂',change:'',note:'다른 물질과 결합하며 환원됨'},reducer:'CH₄ (자신이 산화됨)',oxidizer:'O₂ (산소, 자신이 환원됨)'},
+   use:'천연가스(도시가스)의 연소로 난방·조리에 쓰여. 완전연소하면 CO₂와 물이 나와.',desc:'연료가 산소와 결합하며 빛·열을 내는 반응.'},
+  {match:['C3H8','O2'],theme:'산화환원',type:'연소',stage:'flame',gases:['CO2','H2O'],heatDelta:32,flame:{outer:'#ff8c1a',inner:'#ffd24a'},
+   species:[['C3H8',1,'r'],['O2',5,'r'],['CO2',3,'p'],['H2O',4,'p']],
+   redox:{oxidized:{sp:'C₃H₈ (프로페인)',change:'산소와 결합',note:'산소를 얻음 = 산화'},reduced:{sp:'O₂',change:'',note:'환원됨'},reducer:'C₃H₈ (연료)',oxidizer:'O₂'},
+   use:'LPG(부탄·프로페인) 가스의 연소로, 휴대용 가스·차량 연료에 쓰여.',desc:'연료가 산소와 결합하며 빛·열을 내는 반응.'},
+  {match:['H2','O2'],theme:'산화환원',type:'연소',stage:'flame',gases:['H2O'],heatDelta:34,flame:{outer:'#7fb0ff',inner:'#cfe4ff'},
+   species:[['H2',2,'r'],['O2',1,'r'],['H2O',2,'p']],
+   redox:{oxidized:{sp:'H₂',change:'산소와 결합',note:'산소를 얻어 물이 됨 = 산화'},reduced:{sp:'O₂',change:'',note:'환원됨'},reducer:'H₂ (연료)',oxidizer:'O₂'},
+   use:'수소의 연소로 물만 나와. 수소 연료전지·로켓 연료의 원리야.',desc:'수소가 산소와 결합해 물을 만드는 반응.'},
+  {match:['C','O2'],theme:'산화환원',type:'연소',stage:'flame',gases:['CO2'],heatDelta:28,flame:{outer:'#ff7a1a',inner:'#ffcf5a'},
+   species:[['C',1,'r'],['O2',1,'r'],['CO2',1,'p']],
+   redox:{oxidized:{sp:'C (탄소)',change:'산소와 결합',note:'산소를 얻음 = 산화'},reduced:{sp:'O₂',change:'',note:'환원됨'},reducer:'C (숯·목탄)',oxidizer:'O₂'},
+   use:'숯·목탄의 연소야. 화력 발전·난방의 기본 원리이기도 해.',desc:'탄소가 산소와 결합해 이산화탄소를 만드는 반응.'},
+  {match:['Mg','O2'],theme:'산화환원',type:'연소 (금속)',stage:'flame',gases:[],heatDelta:33,flame:{outer:'#eaeaff',inner:'#ffffff'},
+   species:[['Mg',2,'r'],['O2',1,'r'],['MgO',2,'p']],
+   redox:{oxidized:{sp:'Mg',change:'0 → +2',note:'산소와 결합·전자를 잃음 = 산화'},reduced:{sp:'O₂',change:'0 → -2',note:'전자를 얻음 = 환원'},reducer:'Mg (자신이 산화됨)',oxidizer:'O₂'},
+   use:'마그네슘의 연소로 눈부신 흰 불꽃이 나. 예전 사진 플래시·조명탄에 쓰였어.',desc:'금속이 산소와 결합해 산화물이 되는 반응.'},
+  {match:['S','O2'],theme:'산화환원',type:'연소',stage:'flame',gases:['SO2'],heatDelta:22,flame:{outer:'#6a8fff',inner:'#bcd0ff'},
+   species:[['S',1,'r'],['O2',1,'r'],['SO2',1,'p']],
+   redox:{oxidized:{sp:'S (황)',change:'산소와 결합',note:'산소를 얻음 = 산화'},reduced:{sp:'O₂',change:'',note:'환원됨'},reducer:'S',oxidizer:'O₂'},
+   use:'황의 연소로 푸른 불꽃과 자극적인 SO₂가 나와. SO₂는 산성비의 원인이 되기도 해.',desc:'황이 산소와 결합해 이산화황을 만드는 반응.'},
+  {match:['CuO','H2'],theme:'산화환원',type:'산화·환원 (수소 환원)',stage:'furnace',gases:['H2O'],heatDelta:12,before:{name:'CuO',color:'#2b2b2b'},after:{name:'Cu',color:'#b87333'},
+   species:[['CuO',1,'r'],['H2',1,'r'],['Cu',1,'p'],['H2O',1,'p']],
+   redox:{oxidized:{sp:'H₂',change:'산소 얻음',note:'산소를 얻어 H₂O가 됨 = 산화'},reduced:{sp:'CuO의 Cu',change:'산소 잃음',note:'산소를 잃고 금속 Cu가 됨 = 환원'},reducer:'H₂ (자신이 산화됨)',oxidizer:'CuO (자신이 환원됨)'},
+   use:'수소로 금속 산화물을 환원해 순수 금속을 얻어. 검은 CuO가 붉은 구리로 변해.',desc:'고온에서 산소가 한 물질에서 다른 물질로 옮겨가는 산화·환원.'},
+  {match:['CuO','C'],theme:'산화환원',type:'산화·환원 (탄소 환원)',stage:'furnace',gases:['CO2'],heatDelta:14,before:{name:'CuO',color:'#2b2b2b'},after:{name:'Cu',color:'#b87333'},
+   species:[['CuO',2,'r'],['C',1,'r'],['Cu',2,'p'],['CO2',1,'p']],
+   redox:{oxidized:{sp:'C (탄소)',change:'산소 얻음',note:'산소를 얻어 CO₂가 됨 = 산화'},reduced:{sp:'CuO의 Cu',change:'산소 잃음',note:'산소를 잃고 금속이 됨 = 환원'},reducer:'C (자신이 산화됨)',oxidizer:'CuO (자신이 환원됨)'},
+   use:'탄소로 금속 산화물을 환원하는 제련의 기본 원리야.',desc:'고온에서 탄소가 금속 산화물의 산소를 빼앗는 산화·환원.'},
+  {match:['Fe2O3','Al'],theme:'산화환원',type:'산화·환원 (테르밋)',stage:'furnace',gases:[],heatDelta:38,before:{name:'Fe₂O₃',color:'#7a3b26'},after:{name:'Fe',color:'#8a8f95'},
+   species:[['Fe2O3',1,'r'],['Al',2,'r'],['Fe',2,'p'],['Al2O3',1,'p']],
+   redox:{oxidized:{sp:'Al',change:'0 → +3',note:'산소와 결합 = 산화'},reduced:{sp:'Fe₂O₃의 Fe',change:'+3 → 0',note:'산소를 잃고 금속 철이 됨 = 환원'},reducer:'Al (자신이 산화됨)',oxidizer:'Fe₂O₃ (자신이 환원됨)'},
+   use:'테르밋 반응이야. 아주 높은 열이 나서 철도 레일 용접에 쓰여.',desc:'알루미늄이 철 산화물의 산소를 빼앗아 순수 철을 만드는 격렬한 반응.'},
+  {match:['Fe2O3','CO'],theme:'산화환원',type:'산화·환원 (제련)',stage:'furnace',gases:['CO2'],heatDelta:16,before:{name:'Fe₂O₃',color:'#7a3b26'},after:{name:'Fe',color:'#8a8f95'},
+   species:[['Fe2O3',1,'r'],['CO',3,'r'],['Fe',2,'p'],['CO2',3,'p']],
+   redox:{oxidized:{sp:'CO',change:'산소 얻음',note:'산소를 얻어 CO₂가 됨 = 산화'},reduced:{sp:'Fe₂O₃의 Fe',change:'+3 → 0',note:'산소를 잃고 금속 철이 됨 = 환원'},reducer:'CO (자신이 산화됨)',oxidizer:'Fe₂O₃ (자신이 환원됨)'},
+   use:'용광로에서 철광석(Fe₂O₃)을 일산화탄소로 환원해 철을 뽑아내는 제철의 핵심 반응이야.',desc:'일산화탄소가 철광석의 산소를 빼앗아 철을 만드는 반응.'},
+  {match:['Fe','O2'],theme:'산화환원',type:'부식 (녹슬기)',stage:'surface',gases:[],heatDelta:2,rust:{metal:'#8a8f95',rust:'#8a4a24'},
+   species:[['Fe',4,'r'],['O2',3,'r'],['Fe2O3',2,'p']],
+   redox:{oxidized:{sp:'Fe',change:'0 → +3',note:'전자를 잃고 산소와 결합 = 산화'},reduced:{sp:'O₂',change:'0 → -2',note:'전자를 얻음 = 환원'},reducer:'Fe (자신이 산화됨)',oxidizer:'O₂ (자신이 환원됨)'},
+   use:'철이 공기 중 산소·물과 서서히 반응해 녹스는 부식이야. 실제 녹은 물이 포함된 수화 산화철이고, 도금·페인트로 막아.',desc:'금속이 공기·물과 천천히 반응해 산화되는 반응(시간이 오래 걸림).'},
+];
+function finalizeDB(e){
+  const term=s=>(s[1]>1?s[1]:'')+subscriptify(s[0])+((e.gases||[]).includes(s[0])?'↑':'');
+  const eq=e.species.filter(s=>s[2]==='r').map(term).join(' + ')+' → '+e.species.filter(s=>s[2]==='p').map(term).join(' + ');
+  return {ok:true,theme:e.theme,type:e.type,stage:e.stage,eq,ionize:[],
+    net:'이 반응은 수용액이 아니라 이온으로 나뉘지 않아요 (전자·산소가 이동).',spectators:'해당 없음',
+    species:e.species,redox:e.redox||null,use:e.use||'',colorReason:null,vis:{k:e.stage},
+    precip:null,gas:null,deposit:null,solIons:[],salt:null,water:null,showIndicator:false,solutionType:'중성',
+    heatDelta:e.heatDelta||15,flame:e.flame,before:e.before,after:e.after,rust:e.rust,desc:e.desc};
+}
+function matchDB(X,Y){
+  if(!X.name||!Y.name)return null;
+  for(const e of REACTION_DB){const m=e.match;
+    if((X.name===m[0]&&Y.name===m[1])||(X.name===m[1]&&Y.name===m[0]))return finalizeDB(e);}
+  return null;
+}
+
+function finalize(meta,reactants,products){
+  const all=[...reactants,...products];
+  const coefs=balance(all.map(s=>s.comp),reactants.length);
+  if(!coefs)return {ok:false,msg:'계수를 맞출 수 없는 조합이야.'};
+  all.forEach((s,i)=>s.coef=coefs[i]);reactants.forEach(s=>s.role='r');products.forEach(s=>s.role='p');
+  const term=s=>(s.coef>1?s.coef:'')+subscriptify(s.name)+s.mark;
+  const eq=reactants.map(term).join(' + ')+' → '+products.map(term).join(' + ');
+  const ionize=reactants.filter(s=>s.stype==='compound'&&s.soluble).map(s=>{
+    const c=CATIONS[s.catKey],a=ANIONS[s.anKey];const g=gcd(c.ch,a.ch),nc=a.ch/g,na=c.ch/g;
+    return subscriptify(s.name)+' → '+[(nc>1?nc:'')+catDisp(s.catKey),(na>1?na:'')+anDisp(s.anKey)].join(' + ');});
+  const side=arr=>{const ions={},mols=[];arr.forEach(s=>{
+    if(s.stype==='compound'&&s.soluble){const c=CATIONS[s.catKey],a=ANIONS[s.anKey];const g=gcd(c.ch,a.ch),nc=a.ch/g,na=c.ch/g;
+      ions['c:'+s.catKey]=(ions['c:'+s.catKey]||0)+s.coef*nc;ions['a:'+s.anKey]=(ions['a:'+s.anKey]||0)+s.coef*na;}
+    else mols.push({name:s.name,coef:s.coef,mark:s.mark});});return {ions,mols};};
+  const L=side(reactants),Rr=side(products);const spectators=[];
+  for(const key in L.ions)if(Rr.ions[key]){const c=Math.min(L.ions[key],Rr.ions[key]);L.ions[key]-=c;Rr.ions[key]-=c;if(c>0)spectators.push(key);}
+  const ionD=k=>k.startsWith('c:')?catDisp(k.slice(2)):anDisp(k.slice(2));
+  const bs=S=>{const t=[];for(const k in S.ions)if(S.ions[k]>0)t.push((S.ions[k]>1?S.ions[k]:'')+ionD(k));S.mols.forEach(mo=>t.push((mo.coef>1?mo.coef:'')+subscriptify(mo.name)+mo.mark));return t;};
+  const lt=bs(L),rt=bs(Rr);
+  const net=lt.length?lt.join(' + ')+' → '+rt.join(' + '):'구경꾼 이온만 있어 알짜 반응식이 없음';
+  const specStr=spectators.length?spectators.map(ionD).join(', ')+' (반응에 참여 안 함)':'없음';
+  let precip=null,gas=null,deposit=null;const solIons=[],seen=new Set();
+  products.forEach(s=>{
+    if(s.stype==='compound'){
+      if(!s.soluble){const [cn,ch]=precipColor(s.catKey,s.anKey);precip={name:s.name,colName:cn,colHex:ch};}
+      else{[['c:'+s.catKey,catDisp(s.catKey)],['a:'+s.anKey,anDisp(s.anKey)]].forEach(([k,disp])=>{if(!seen.has(k)){seen.add(k);const [cn,ch]=ionColor(k);solIons.push({disp,colName:cn,colHex:ch,colorless:cn==='무색'});}});}
+    }else if(s.stype==='mol'&&s.mark==='↑')gas={name:s.name};
+    else if(s.stype==='metal')deposit={name:s.name,colHex:s.name==='Cu'?'#b87333':s.name==='Ag'?'#d9d9d9':s.name==='Pb'?'#9a9a9a':'#c0c0c0'};
+  });
+  // 중화: 염과 물 구분
+  let salt=null,water=null;
+  if(meta.theme==='중화'){const sp=products.find(s=>s.stype==='compound');const wp=products.find(s=>s.name==='H2O');salt=sp?sp.name:null;water=wp?'H₂O':null;}
+  // 실생활 활용
+  const use=useFor(reactants[0].name,reactants[1].name,meta.theme);
+  // 지시약 / 용액 액성
+  const hasAcid=reactants.some(s=>s.stype==='compound'&&s.catKey==='H');
+  const hasBase=reactants.some(s=>s.stype==='compound'&&s.anKey==='OH');
+  const showIndicator=(meta.theme==='중화')||(hasAcid&&!hasBase);
+  let solutionType='중성';
+  if(meta.theme==='중화'&&meta.type==='중화')solutionType='titration';
+  else if(hasAcid)solutionType='산성';
+  const species=all.map(s=>[s.name,s.coef,s.role]);
+  return {ok:true,...meta,eq,ionize,net,spectators:specStr,species,vis:meta.vis,precip,gas,deposit,solIons,salt,water,use,showIndicator,solutionType,stage:'beaker'};
+}
+
+/* ================= 그래프 ================= */
+const PAL=['#6C776F','#BA7517','#0F766E','#378ADD','#D4537E'];
+function buildGraphs(R){
+  const gs=[],sp=R.species,maxCoef=Math.max(...sp.map(s=>s[1])),dT=R.heatDelta||8;
+  const titr=R.solutionType==='titration';
+  const commonMap=titr?(p=>Math.min(p*2,1)):(p=>p);
+  gs.push({label:'물질의 양',spec:{series:sp.map((s,i)=>({label:subscriptify(s[0]),color:PAL[i%5],fn:x=>s[2]==='r'?s[1]*(1-x):s[1]*x})),
+    xmax:1,ymax:maxCoef*1.05,xlabel:'반응 진행도 →',ylabel:'mol',mapX:commonMap,note:'반응물은 줄고 생성물은 늘어남'}});
+  if(!titr)gs.push({label:'온도 변화',spec:{series:[{label:'온도',color:'#D4537E',fn:x=>25+dT*x}],
+    xmax:1,ymax:25+dT*1.2,xlabel:'반응 진행도 →',ylabel:'℃',mapX:commonMap,note:'발열 반응 — 진행될수록 온도 상승 (상대적 개념도)'}});
+  if(titr){
+    gs.push({label:'적정: 이온 수',spec:{series:[
+      {label:'H⁺',color:'#D4537E',fn:b=>Math.max(0,1-b)},{label:'OH⁻',color:'#378ADD',fn:b=>Math.max(0,b-1)},
+      {label:'양이온(염기)',color:'#BA7517',fn:b=>b},{label:'음이온(산·구경꾼)',color:'#6C776F',fn:b=>1}],
+      xmax:2,ymax:2.1,xlabel:'넣어준 염기의 양 →',ylabel:'이온 수',mapX:p=>p*2,equiv:1,
+      note:'염기를 넣을수록 H⁺ 감소 → 완전 중화 후 OH⁻ 증가'}});
+    gs.push({label:'적정: 중화열',spec:{series:[{label:'온도',color:'#D4537E',fn:b=>25+15*Math.min(b,1)-4*Math.max(0,b-1)}],
+      xmax:2,ymax:44,xlabel:'넣어준 염기의 양 →',ylabel:'℃',mapX:p=>p*2,equiv:1,
+      note:'완전 중화점에서 발생 열이 최대 → 온도 최고, 이후 과량 염기로 낮아짐'}});
+  }
+  if(R.gas)gs.push({label:'기체 발생량',spec:{series:[{label:subscriptify(R.gas.name),color:'#378ADD',fn:x=>1-Math.exp(-3*x)}],
+    xmax:1,ymax:1.05,xlabel:'시간 →',ylabel:'누적 기체(상대)',mapX:p=>p,note:'반응물이 소모되며 발생 속도가 느려져 평평해짐'}});
+  if(R.deposit)gs.push({label:'금속이온 농도',spec:{series:[{label:'반응하는 금속이온',color:'#3a7bd5',fn:x=>1-x},{label:'석출·새 이온',color:'#BA7517',fn:x=>x}],
+    xmax:1,ymax:1.05,xlabel:'반응 진행도 →',ylabel:'농도(상대)',mapX:p=>p,note:'금속이온이 줄며 용액 색이 옅어지고 금속이 석출됨'}});
+  if(R.precip)gs.push({label:'앙금 생성량',spec:{series:[{label:subscriptify(R.precip.name)+' 앙금',color:'#0F766E',fn:x=>x}],
+    xmax:1,ymax:1.05,xlabel:'반응 진행도 →',ylabel:'앙금(상대)',mapX:p=>p,note:'진행될수록 앙금이 쌓임'}});
+  return gs;
+}
+function drawGeneric(spec,progress){
+  const GW=400,GH=240,ml=46,mb=34,mr=16,mt=18,x0=ml,x1=GW-mr,y0=GH-mb,y1=mt;
+  const PX=x=>x0+(x1-x0)*(x/spec.xmax),PY=y=>y0-(y0-y1)*(y/spec.ymax);
+  let g=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y0}" stroke="#CFD0C6"/><line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y1}" stroke="#CFD0C6"/>`;
+  if(spec.equiv!=null){const ex=PX(spec.equiv);g+=`<line x1="${ex}" y1="${y1}" x2="${ex}" y2="${y0}" stroke="#B8A24A" stroke-dasharray="4 3"/><text x="${ex}" y="${y1-5}" text-anchor="middle" font-size="10" fill="#8a7a30">완전 중화</text>`;}
+  const N=48;
+  const mx=spec.mapX?spec.mapX(progress):progress*spec.xmax;
+  spec.series.forEach(s=>{let pts=[];for(let i=0;i<=N;i++){const x=spec.xmax*i/N;pts.push(PX(x).toFixed(1)+','+PY(Math.max(0,Math.min(spec.ymax,s.fn(x)))).toFixed(1));}
+    g+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2"/>`;});
+  g+=`<line x1="${PX(mx)}" y1="${y1}" x2="${PX(mx)}" y2="${y0}" stroke="#9AA39C" stroke-width="1.5"/>`;
+  spec.series.forEach(s=>{const y=Math.max(0,Math.min(spec.ymax,s.fn(mx)));g+=`<circle cx="${PX(mx)}" cy="${PY(y)}" r="4" fill="${s.color}" stroke="#fff" stroke-width="1"/>`;});
+  g+=`<text x="${(x0+x1)/2}" y="${GH-8}" text-anchor="middle" font-size="11" fill="#6C776F">${spec.xlabel}</text>`;
+  g+=`<text x="${x0-6}" y="${y1-4}" text-anchor="end" font-size="11" fill="#6C776F">${spec.ylabel}</text>`;
+  document.getElementById('graph').innerHTML=g;
+  let lg='';spec.series.forEach(s=>{const v=' '+Math.max(0,s.fn(mx)).toFixed(2);lg+=`<span><span class="swatch" style="background:${s.color}"></span>${s.label}${v}</span>`;});
+  if(spec.note)lg+=`<span style="width:100%;color:#8a8f89;margin-top:2px">${spec.note}</span>`;
+  document.getElementById('legend').innerHTML=lg;
+}
+
+/* ================= 비커 시각화 ================= */
+let R=null,progress=0,raf=null,curGraph=0;
+const cv=document.getElementById('beaker'),ctx=cv.getContext('2d');
+const W=380,H=300,bx=70,by=34,bw=152,bh=212,floorY=by+bh,ly=by+44,tx=330;
+let chips=[],settled=[],bubbles=[];
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const lerp=(a,b,t)=>Math.round(a+(b-a)*t);
+function setupBeaker(){
+  chips=[];R.solIons.forEach(io=>{for(let i=0;i<2;i++)chips.push({x:rnd(bx+32,bx+bw-32),y:rnd(ly+16,floorY-24),vx:rnd(-.32,.32),vy:rnd(-.28,.28),io});});
+  settled=[];bubbles=[];
+  if(R.vis.k==='precip'||R.vis.k==='displace'){let n=0;for(let row=0;row<9&&n<54;row++)for(let k=0;k<9&&n<54;k++){settled.push({x:bx+8+k*11+(row%2?5:0),y:floorY-4-row*7});n++;}}
+}
+function chip(x,y,text,colHex,colorless){
+  ctx.font='11px ui-monospace,monospace';const w=ctx.measureText(text).width+12,h=17;
+  ctx.beginPath();ctx.roundRect(x-w/2,y-h/2,w,h,7);
+  ctx.fillStyle=colorless?'rgba(150,160,170,0.16)':hexA(colHex,0.30);ctx.fill();
+  ctx.strokeStyle=colorless?'rgba(140,150,160,0.5)':hexA(colHex,0.85);ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#1B2A2A';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);
+}
+function thermo(){
+  const top=ly,bot=floorY-4,tubeW=11;
+  ctx.strokeStyle='#9a9a9a';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.roundRect(tx-tubeW/2,top,tubeW,bot-top,tubeW/2);ctx.stroke();
+  ctx.beginPath();ctx.arc(tx,bot+7,9,0,7);ctx.fillStyle='#d0453a';ctx.fill();ctx.strokeStyle='#9a9a9a';ctx.stroke();
+  const dT=R.heatDelta||8;let tval,frac;
+  if(R.mode==='titration'){const base=progress*2;tval=15*Math.min(base,1)-4*Math.max(0,base-1);frac=tval/15;}
+  else{tval=dT*progress;frac=progress;}
+  frac=Math.max(0,Math.min(1,frac));const fillH=(bot-top)*(0.12+0.88*frac);
+  ctx.fillStyle='#d0453a';ctx.beginPath();ctx.roundRect(tx-tubeW/2+2,bot-fillH,tubeW-4,fillH,3);ctx.fill();
+  ctx.fillStyle='#1B2A2A';ctx.font='11px '+getComputedStyle(document.body).fontFamily;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillText('+'+Math.round(tval)+'℃',tx,top-6);ctx.fillText('온도',tx,bot+26);
+}
+let T=0;
+function frame(){
+  T++;ctx.clearRect(0,0,W,H);
+  const st=R.stage||'beaker';
+  if(st==='flame')drawFlame();
+  else if(st==='furnace')drawFurnace();
+  else if(st==='surface')drawSurface();
+  else drawBeaker();
+  raf=requestAnimationFrame(frame);
+}
+function drawBeaker(){
+  let liq='rgba(133,183,235,0.18)';
+  if(R.mode==='titration'){const pf=Math.max(0,Math.min(1,progress*2-1));const c0=[224,232,236],c1=[230,120,175];liq=`rgba(${lerp(c0[0],c1[0],pf)},${lerp(c0[1],c1[1],pf)},${lerp(c0[2],c1[2],pf)},0.34)`;}
+  else if(R.vis.liq0){const a=R.vis.liq0,b=R.vis.liq1,t=progress;liq=`rgba(${lerp(a[0],b[0],t)},${lerp(a[1],b[1],t)},${lerp(a[2],b[2],t)},0.32)`;}
+  ctx.fillStyle=liq;ctx.fillRect(bx,ly,bw,floorY-ly);
+  ctx.strokeStyle='#8f8f8f';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(bx-6,by);ctx.lineTo(bx,floorY);ctx.lineTo(bx+bw,floorY);ctx.lineTo(bx+bw+6,by);ctx.stroke();
+  if(R.vis.k==='precip'||R.vis.k==='displace'){ctx.fillStyle=R.vis.c;const show=Math.floor(progress*settled.length);for(let i=0;i<show;i++){ctx.beginPath();ctx.arc(settled[i].x,settled[i].y,3.5,0,7);ctx.fill();}}
+  if(R.vis.k==='gas'){if(Math.random()<progress*0.45)bubbles.push({x:rnd(bx+12,bx+bw-12),y:floorY-6,r:rnd(1.5,3.5)});
+    ctx.fillStyle=R.vis.c;ctx.strokeStyle='rgba(150,150,150,0.5)';bubbles.forEach(b=>{b.y-=1.6;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill();ctx.stroke();});bubbles=bubbles.filter(b=>b.y>ly);}
+  chips.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<bx+28||p.x>bx+bw-28)p.vx*=-1;if(p.y<ly+14||p.y>floorY-22)p.vy*=-1;chip(p.x,p.y,p.io.disp,p.io.colHex,p.io.colorless);});
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.font='12px '+getComputedStyle(document.body).fontFamily;ctx.fillStyle='#1B2A2A';
+  if(R.precip&&progress>0.02)ctx.fillText('바닥 침전 = '+R.precip.name+' 앙금',bx+bw/2,floorY+18);
+  else if(R.deposit&&progress>0.02)ctx.fillText('바닥·표면 = '+R.deposit.name+' 금속 석출',bx+bw/2,floorY+18);
+  else if(R.gas&&progress>0.02)ctx.fillText(R.gas.name+' 기체 발생 ↑',bx+bw/2,floorY+18);
+  thermo();
+}
+function drawFlame(){
+  const cx0=W/2,base=floorY+6;
+  ctx.fillStyle='#555';ctx.fillRect(cx0-26,base,52,10);ctx.fillRect(cx0-6,base-16,12,16);
+  const p=Math.max(0.15,progress),fl=R.flame||{outer:'#ff8c1a',inner:'#ffd24a'};
+  const h=(90+40*Math.sin(T*0.3))*p+40, w=26*p+8;
+  const draw=(col,scale,alpha)=>{ctx.fillStyle=col;ctx.globalAlpha=alpha;ctx.beginPath();
+    const top=base-16-h*scale, ww=w*scale, flick=Math.sin(T*0.4)*3*scale;
+    ctx.moveTo(cx0,top);ctx.quadraticCurveTo(cx0+ww+flick,base-16-h*scale*0.4,cx0+ww*0.4,base-16);
+    ctx.lineTo(cx0-ww*0.4,base-16);ctx.quadraticCurveTo(cx0-ww-flick,base-16-h*scale*0.4,cx0,top);ctx.fill();};
+  draw(fl.outer,1,0.9);draw(fl.inner,0.6,0.95);ctx.globalAlpha=1;
+  // 상승하는 생성 기체 라벨
+  ctx.font='11px '+getComputedStyle(document.body).fontFamily;ctx.textAlign='center';ctx.fillStyle='rgba(120,130,135,0.8)';
+  const gases=R.species.filter(s=>s[2]==='p'&&(R.__gasNames||[]).includes(s[0]));
+  ctx.textBaseline='alphabetic';ctx.fillStyle='#1B2A2A';ctx.fillText('연소 (불꽃)',cx0,28);
+  thermo();
+}
+function drawFurnace(){
+  const cx0=W/2-18,cy0=floorY-20;
+  const glow=ctx.createRadialGradient(cx0,cy0,4,cx0,cy0,80);
+  glow.addColorStop(0,`rgba(255,140,40,${0.15+0.35*progress})`);glow.addColorStop(1,'rgba(255,140,40,0)');
+  ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+  // 도가니
+  ctx.strokeStyle='#8f8f8f';ctx.lineWidth=2.5;ctx.beginPath();
+  ctx.moveTo(cx0-46,cy0-46);ctx.lineTo(cx0-34,cy0+34);ctx.lineTo(cx0+34,cy0+34);ctx.lineTo(cx0+46,cy0-46);ctx.stroke();
+  // 고체 덩어리: before → after 색 보간
+  const b=R.before||{color:'#555'},a=R.after||{color:'#999'};
+  const col=`rgb(${lerp(parseInt(b.color.slice(1,3),16),parseInt(a.color.slice(1,3),16),progress)},${lerp(parseInt(b.color.slice(3,5),16),parseInt(a.color.slice(3,5),16),progress)},${lerp(parseInt(b.color.slice(5,7),16),parseInt(a.color.slice(5,7),16),progress)})`;
+  ctx.fillStyle=col;
+  for(let i=0;i<6;i++){const rx=cx0-28+(i%3)*20+(i>2?10:0),ry=cy0+8+(i>2?12:0);ctx.beginPath();ctx.roundRect(rx,ry,16,12,3);ctx.fill();}
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.font='12px '+getComputedStyle(document.body).fontFamily;ctx.fillStyle='#1B2A2A';
+  ctx.fillText('고온 가열',cx0,26);
+  ctx.font='11px '+getComputedStyle(document.body).fontFamily;ctx.fillStyle='#6C776F';
+  ctx.fillText(progress<0.5?b.name+' (반응 전)':a.name+' (반응 후)',cx0,cy0+58);
+  thermo();
+}
+function drawSurface(){
+  const nx=100,ny=80,nw=180,nh=130;
+  // 철판
+  ctx.fillStyle='#8a8f95';ctx.beginPath();ctx.roundRect(nx,ny,nw,nh,8);ctx.fill();
+  ctx.strokeStyle='#6b7075';ctx.lineWidth=1.5;ctx.stroke();
+  // 녹 번짐 (진행도 비례)
+  ctx.fillStyle=(R.rust&&R.rust.rust)||'#8a4a24';
+  const spots=Math.floor(progress*46);let s=1;
+  for(let i=0;i<spots;i++){s=(s*9301+49297)%233280;const rx=nx+8+(s/233280)*(nw-16);s=(s*9301+49297)%233280;const ry=ny+8+(s/233280)*(nh-16);s=(s*9301+49297)%233280;const rr=2+(s/233280)*4;ctx.beginPath();ctx.arc(rx,ry,rr,0,7);ctx.fill();}
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.font='12px '+getComputedStyle(document.body).fontFamily;ctx.fillStyle='#1B2A2A';
+  ctx.fillText('철 표면 — 시간 경과',nx+nw/2,ny-10);
+  ctx.font='11px '+getComputedStyle(document.body).fontFamily;ctx.fillStyle='#6C776F';
+  ctx.fillText(progress<0.1?'깨끗한 철':progress<0.7?'녹이 번지는 중':'녹슨 철 (Fe₂O₃)',nx+nw/2,ny+nh+20);
+}
+
+/* ================= UI ================= */
+const THEME_BADGE={'앙금':['#E6F1FB','#185FA5'],'중화':['#E6F3E4','#3B6D11'],'산화환원':['#FAEEDA','#854F0B']};
+function renderIdPanel(){
+  let h='';
+  const nonAq=R.stage&&R.stage!=='beaker';
+  if(nonAq){const stg={flame:'불꽃 (연소)',furnace:'고온 가열',surface:'금속 표면 (시간 경과)'}[R.stage]||R.stage;
+    h+=`<div class="idrow"><span class="idswatch" style="background:#F3E1D2"></span><span><b>반응 무대</b> — ${stg}. ${R.desc||''}</span></div>`;}
+  if(R.precip)h+=`<div class="idrow"><span class="idswatch" style="background:${R.precip.colHex};border:1px solid #b8b8b8"></span><span><b>앙금 (침전)</b> — ${subscriptify(R.precip.name)}, 색: <b>${R.precip.colName}</b>. 물에 안 녹아 바닥에 가라앉는 물질이야.</span></div>`;
+  if(R.deposit)h+=`<div class="idrow"><span class="idswatch" style="background:${R.deposit.colHex};border:1px solid #b8b8b8"></span><span><b>금속 석출</b> — ${R.deposit.name} 금속. 이온이던 ${R.deposit.name}이 전자를 얻어 금속으로 변해 바닥·금속 표면에 쌓이는 거야.</span></div>`;
+  if(R.gas)h+=`<div class="idrow"><span class="idswatch" style="background:#eef1f3;border:1px solid #ccc"></span><span><b>기체 발생</b> — ${subscriptify(R.gas.name)} ↑, 기포로 빠져나감.</span></div>`;
+  if(R.salt||R.water)h+=`<div class="idrow"><span class="idswatch" style="background:#EAF0EE"></span><span><b>염과 물</b> — ${R.salt?'염(salt): <b>'+subscriptify(R.salt)+'</b> (산의 음이온 + 염기의 양이온)':''}${R.salt&&R.water?', ':''}${R.water?'물: <b>H₂O</b> (H⁺ + OH⁻)':''}</span></div>`;
+  if(R.colorReason)h+=`<div class="idrow"><span class="idswatch" style="background:linear-gradient(90deg,#9cc3ec,#eef1f3)"></span><span><b>${nonAq?'색 변화':'용액 색 변화 이유'}</b> — ${R.colorReason}</span></div>`;
+  h+=`<div class="idrow"><span class="idswatch" style="background:#d0453a"></span><span><b>온도 변화</b> — 발열 반응이라 진행되며 온도가 올라감 (오른쪽 온도계와 '온도 변화' 그래프 참고).</span></div>`;
+  if(!nonAq)h+=`<div class="idrow"><span style="width:14px"></span><span><b>용액 속 이온</b> `+(R.solIons.length?R.solIons.map(io=>`<span class="ionchip" style="background:${io.colorless?'#eef1f3':hexA(io.colHex,0.22)}">${io.disp} <em>${io.colName}</em></span>`).join(' '):'없음')+`</span></div>`;
+  if(R.use)h+=`<div class="idrow"><span class="idswatch" style="background:#F0EAD6"></span><span><b>실생활 활용</b> — ${R.use}</span></div>`;
+  document.getElementById('idpanel').innerHTML=h;
+}
+function renderRedox(){
+  const p=document.getElementById('redoxpanel');
+  if(R.theme!=='산화환원'||!R.redox){p.style.display='none';return;}
+  const rx=R.redox;p.style.display='flex';
+  p.innerHTML=`<div class="idrow"><b>산화·환원 분석</b></div>
+    <div class="idrow"><span class="idswatch" style="background:#E76F1B"></span><span><b>산화된 물질</b> — ${rx.oxidized.sp} (산화수 ${rx.oxidized.change}, ${rx.oxidized.note}) → 이 물질이 <b>환원제</b>: ${rx.reducer}</span></div>
+    <div class="idrow"><span class="idswatch" style="background:#2F6FD0"></span><span><b>환원된 물질</b> — ${rx.reduced.sp} (산화수 ${rx.reduced.change}, ${rx.reduced.note}) → 이 물질이 <b>산화제</b>: ${rx.oxidizer}</span></div>
+    <div class="idrow" style="color:var(--muted)"><span style="width:14px"></span><span>이 반응은 <b>전자가 이동</b>하는 산화·환원이에요 (산소가 직접 오가지 않음). 산화 = 전자 잃음·산화수 증가, 환원 = 전자 얻음·산화수 감소.</span></div>`;
+}
+function phBar(state){
+  const pos=state==='산성'?15:state==='염기성'?85:50;
+  return `<div class="phbar"><div class="phmark" style="left:${pos}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px"><span>pH 0 · 강산</span><span>7 · 중성</span><span>14 · 강염기</span></div>`;
+}
+function renderIndicator(progress){
+  const p=document.getElementById('indicatorpanel');
+  if(!R.showIndicator){p.style.display='none';return;}
+  let state;
+  if(R.solutionType==='titration'){const base=progress*2;state=base<0.9?'산성':(base<=1.1?'중성':'염기성');}
+  else state=R.solutionType;
+  const states=['산성','중성','염기성'];
+  const rows=INDICATORS.map(ind=>{
+    const cells=states.map(st=>{const [nm,cl]=ind[st];const on=st===state;
+      return `<td style="text-align:center;${on?'outline:2px solid var(--accent);border-radius:6px':''}"><span style="display:inline-block;width:22px;height:14px;border-radius:3px;background:${cl};border:1px solid #ccc;vertical-align:middle"></span><div style="font-size:10px;color:var(--muted)">${nm}</div></td>`;}).join('');
+    return `<tr><td style="white-space:nowrap">${ind.name}</td>${cells}</tr>`;
+  }).join('');
+  p.style.display='block';
+  p.innerHTML=`<div style="font-size:13px;margin-bottom:8px"><b>지시약 & pH</b> — 현재 용액은 <b style="color:var(--accent)">${state}</b>${R.solutionType==='titration'?' (염기를 더 넣어 완전 중화점을 지나면 염기성까지 변함)':''}</div>
+    <table class="indtable"><tr><td></td><td style="text-align:center;font-size:11px;color:var(--muted)">산성</td><td style="text-align:center;font-size:11px;color:var(--muted)">중성</td><td style="text-align:center;font-size:11px;color:var(--muted)">염기성</td></tr>${rows}</table>
+    <div style="margin-top:12px;max-width:420px">${phBar(state)}</div>`;
+}
+function renderGraphTabs(){
+  document.getElementById('graphtabs').innerHTML=R.graphs.map((g,i)=>`<button data-i="${i}" class="${i===curGraph?'on':''}">${g.label}</button>`).join('');
+  document.querySelectorAll('#graphtabs button').forEach(b=>b.addEventListener('click',()=>{curGraph=+b.dataset.i;renderGraphTabs();drawGeneric(R.graphs[curGraph].spec,progress);}));
+}
+function parseReactants(str){return (str||'').split('+').map(s=>s.trim().replace(/^\d+\s*/,'')).filter(Boolean);}
+function run(){
+  const parts=parseReactants(document.getElementById('inReact').value);
+  const errBox=document.getElementById('errBox'),result=document.getElementById('result');
+  if(parts.length!==2){errBox.style.display='block';errBox.textContent='반응물을 + 로 구분해 2개 입력해줘. 예: AgNO3 + NaCl';result.style.display='none';if(raf)cancelAnimationFrame(raf);return;}
+  const res=predict(parts[0],parts[1]);
+  if(!res.ok){errBox.style.display='block';errBox.textContent=res.msg;result.style.display='none';if(raf)cancelAnimationFrame(raf);return;}
+  errBox.style.display='none';result.style.display='block';R=res;progress=0;curGraph=0;R.graphs=buildGraphs(R);
+  R.mode=R.solutionType==='titration'?'titration':'progress';
+  const [bg,fg]=THEME_BADGE[res.theme]||['#eee','#333'];const bd=document.getElementById('badge');
+  bd.textContent=res.type;bd.style.background=bg;bd.style.color=fg;
+  document.getElementById('eq').textContent=res.eq;
+  document.getElementById('env').textContent='반응 환경: 수용액 (비커)';
+  document.getElementById('ionize').innerHTML=res.ionize.length?res.ionize.join('&nbsp;&nbsp;/&nbsp;&nbsp;'):'(해당 없음)';
+  document.getElementById('net').textContent=res.net;
+  document.getElementById('spec').textContent=res.spectators;
+  document.getElementById('proglabel').textContent=R.mode==='titration'?'넣어준 염기의 양':'반응 진행';
+  document.getElementById('prog').value=0;document.getElementById('pval').textContent=R.mode==='titration'?'0.00':'0%';
+  renderIdPanel();renderRedox();renderIndicator(0);renderGraphTabs();drawGeneric(R.graphs[0].spec,0);setupBeaker();if(raf)cancelAnimationFrame(raf);frame();
+}
+document.getElementById('runBtn').addEventListener('click',run);
+/* 반응 목록 (입력창 채우기) */
+const RX_GROUPS=[
+  ['앙금 생성',['AgNO3 + NaCl','AgNO3 + KI','CuSO4 + NaOH','FeCl3 + NaOH','Pb(NO3)2 + KI','BaCl2 + Na2SO4','CaCl2 + Na2CO3','CoCl2 + NaOH','NiCl2 + NaOH','CaCl2 + NaF','Na3PO4 + CaCl2','CaCl2 + Na2C2O4','SrCl2 + Na2SO4']],
+  ['중화',['HCl + NaOH','H2SO4 + KOH','HNO3 + KOH','HCl + Ca(OH)2','H3PO4 + NaOH','CaCO3 + HCl','NaHCO3 + HCl']],
+  ['산화·환원 (금속+산·치환)',['Zn + HCl','Mg + HCl','Fe + HCl','Al + HCl','Fe + CuSO4','Zn + CuSO4','Cu + AgNO3','Sn + CuSO4']],
+  ['할로젠 치환 · 금속+물',['Cl2 + KBr','Cl2 + KI','Br2 + KI','Na + H2O','K + H2O','Ca + H2O','Li + H2O']],
+  ['연소',['CH4 + O2','C3H8 + O2','H2 + O2','C + O2','Mg + O2','S + O2']],
+  ['고온 산화·환원 · 부식',['CuO + H2','CuO + C','Fe2O3 + Al','Fe2O3 + CO','Fe + O2']],
+];
+function renderRxList(){
+  document.getElementById('rxlist').innerHTML=RX_GROUPS.map(([g,items])=>
+    `<div class="rxgroup"><div class="gl">${g}</div><div class="items">${items.map(x=>`<button>${x}</button>`).join('')}</div></div>`).join('');
+  document.querySelectorAll('#rxlist .items button').forEach(b=>b.addEventListener('click',()=>{
+    document.getElementById('inReact').value=b.textContent;
+    document.getElementById('rxlist').style.display='none';
+    document.getElementById('listBtn').textContent='반응 목록 ▾';
+    run();
+  }));
+}
+renderRxList();
+document.getElementById('listBtn').addEventListener('click',()=>{
+  const l=document.getElementById('rxlist'),open=l.style.display==='none';
+  l.style.display=open?'block':'none';
+  document.getElementById('listBtn').textContent=open?'반응 목록 ▴':'반응 목록 ▾';
+});
+document.getElementById('inReact').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+document.getElementById('prog').addEventListener('input',e=>{progress=e.target.value/100;
+  document.getElementById('pval').textContent=R.mode==='titration'?((progress*2).toFixed(2)+(Math.abs(progress*2-1)<0.03?' 완전중화':'')):(e.target.value+'%');
+  drawGeneric(R.graphs[curGraph].spec,progress);renderIndicator(progress);});
+
+/* 불꽃 반응 */
+function showFlame(metal){
+  const [name,colName,col]=FLAME_TEST[metal];
+  const svg=`<defs><radialGradient id="fg" cx="50%" cy="70%" r="60%"><stop offset="0%" stop-color="#fff" stop-opacity="0.9"/><stop offset="45%" stop-color="${col}" stop-opacity="0.95"/><stop offset="100%" stop-color="${col}" stop-opacity="0.2"/></radialGradient></defs>
+    <rect x="46" y="150" width="28" height="8" rx="2" fill="#666"/><rect x="56" y="140" width="8" height="12" fill="#777"/>
+    <path d="M60 20 C86 60 92 96 74 128 C68 138 52 138 46 128 C28 96 34 60 60 20 Z" fill="url(#fg)"/>
+    <path d="M60 66 C72 86 74 104 66 122 C62 130 58 130 54 122 C46 104 48 86 60 66 Z" fill="#fff" opacity="0.65"/>`;
+  document.getElementById('flamesvg').innerHTML=svg;
+  const uses={Na:'나트륨 가로등(노란 불빛)',K:'불꽃놀이',Li:'붉은 조명탄·불꽃놀이',Ca:'불꽃놀이',Sr:'붉은 불꽃놀이',Ba:'초록 불꽃놀이',Cu:'청록 불꽃놀이'};
+  document.getElementById('flameinfo').innerHTML=`<b>${name}(${metal})</b>의 불꽃색: <b style="color:${col}">${colName}</b><div style="color:var(--muted);font-size:13px;margin-top:6px">금속마다 고유한 불꽃색이 나와서, 이 색으로 어떤 금속인지 알아낼 수 있어요(정성분석). 실생활에서는 ${uses[metal]||'불꽃놀이'}에 이용됩니다.</div>`;
+}
+document.querySelectorAll('#flamepanel button').forEach(b=>b.addEventListener('click',()=>showFlame(b.dataset.m)));
+showFlame('Na');
+
+/* 다크 모드 */
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  document.body.classList.toggle('dark');
+  document.getElementById('themeBtn').textContent=document.body.classList.contains('dark')?'라이트 모드':'다크 모드';
+});
+
+/* ===== 주기율표 · 결합 예측 ===== */
+const ELEM={
+  H:{n:1,kr:'수소',col:1,row:1,cat:'nonmetal',ch:null},He:{n:2,kr:'헬륨',col:18,row:1,cat:'noble',ch:null},
+  Li:{n:3,kr:'리튬',col:1,row:2,cat:'metal',ch:1},Be:{n:4,kr:'베릴륨',col:2,row:2,cat:'metal',ch:2},B:{n:5,kr:'붕소',col:13,row:2,cat:'metalloid',ch:null},C:{n:6,kr:'탄소',col:14,row:2,cat:'nonmetal',ch:null},N:{n:7,kr:'질소',col:15,row:2,cat:'nonmetal',ch:-3},O:{n:8,kr:'산소',col:16,row:2,cat:'nonmetal',ch:-2},F:{n:9,kr:'플루오린',col:17,row:2,cat:'nonmetal',ch:-1},Ne:{n:10,kr:'네온',col:18,row:2,cat:'noble',ch:null},
+  Na:{n:11,kr:'나트륨',col:1,row:3,cat:'metal',ch:1},Mg:{n:12,kr:'마그네슘',col:2,row:3,cat:'metal',ch:2},Al:{n:13,kr:'알루미늄',col:13,row:3,cat:'metal',ch:3},Si:{n:14,kr:'규소',col:14,row:3,cat:'metalloid',ch:null},P:{n:15,kr:'인',col:15,row:3,cat:'nonmetal',ch:-3},S:{n:16,kr:'황',col:16,row:3,cat:'nonmetal',ch:-2},Cl:{n:17,kr:'염소',col:17,row:3,cat:'nonmetal',ch:-1},Ar:{n:18,kr:'아르곤',col:18,row:3,cat:'noble',ch:null},
+  K:{n:19,kr:'칼륨',col:1,row:4,cat:'metal',ch:1},Ca:{n:20,kr:'칼슘',col:2,row:4,cat:'metal',ch:2},Cr:{n:24,kr:'크로뮴',col:6,row:4,cat:'metal',ch:3,multi:1},Mn:{n:25,kr:'망가니즈',col:7,row:4,cat:'metal',ch:2,multi:1},Fe:{n:26,kr:'철',col:8,row:4,cat:'metal',ch:2,multi:1},Co:{n:27,kr:'코발트',col:9,row:4,cat:'metal',ch:2,multi:1},Ni:{n:28,kr:'니켈',col:10,row:4,cat:'metal',ch:2,multi:1},Cu:{n:29,kr:'구리',col:11,row:4,cat:'metal',ch:2,multi:1},Zn:{n:30,kr:'아연',col:12,row:4,cat:'metal',ch:2},Ga:{n:31,kr:'갈륨',col:13,row:4,cat:'metal',ch:3},Ge:{n:32,kr:'저마늄',col:14,row:4,cat:'metalloid',ch:null},As:{n:33,kr:'비소',col:15,row:4,cat:'metalloid',ch:null},Se:{n:34,kr:'셀레늄',col:16,row:4,cat:'nonmetal',ch:-2},Br:{n:35,kr:'브로민',col:17,row:4,cat:'nonmetal',ch:-1},Kr:{n:36,kr:'크립톤',col:18,row:4,cat:'noble',ch:null},
+  Rb:{n:37,kr:'루비듐',col:1,row:5,cat:'metal',ch:1},Sr:{n:38,kr:'스트론튬',col:2,row:5,cat:'metal',ch:2},Ag:{n:47,kr:'은',col:11,row:5,cat:'metal',ch:1},Sn:{n:50,kr:'주석',col:14,row:5,cat:'metal',ch:2,multi:1},I:{n:53,kr:'아이오딘',col:17,row:5,cat:'nonmetal',ch:-1},Xe:{n:54,kr:'제논',col:18,row:5,cat:'noble',ch:null},
+  Cs:{n:55,kr:'세슘',col:1,row:6,cat:'metal',ch:1},Ba:{n:56,kr:'바륨',col:2,row:6,cat:'metal',ch:2},Pb:{n:82,kr:'납',col:14,row:6,cat:'metal',ch:2,multi:1},
+};
+const COVALENT={'H,O':['H₂O','물 (H₂O₂ 같은 다른 화합물도 가능)'],'H,N':['NH₃','암모니아'],'C,H':['CH₄','메테인 (C₂H₆·C₂H₄ 등 수많은 탄화수소가 가능)'],'Cl,H':['HCl','염화수소'],'H,S':['H₂S','황화수소'],'F,H':['HF','플루오린화수소'],'Br,H':['HBr','브로민화수소'],'H,I':['HI','아이오딘화수소'],'C,O':['CO₂','이산화탄소 (CO도 가능)'],'N,O':['NO₂','이산화질소 (NO·N₂O 등 여러 산화물 가능)'],'O,S':['SO₂','이산화황 (SO₃도 가능)'],'Cl,Cl':['Cl₂','염소 분자'],'O,O':['O₂','산소 분자'],'H,H':['H₂','수소 분자'],'N,N':['N₂','질소 분자'],'O,P':['P₂O₅','오산화이인']};
+const EXT='※ 이 도구는 규칙이 명확한 이온결합과 대표적인 공유결합만 예측해요. 공유결합의 정확한 원자 수, 3원소 이상의 복잡한 화합물, 유기물(탄소 화합물)은 규칙만으로 하나로 정해지지 않아, 앞으로 심화 학습(분자 구조·결합수)으로 확장할 과제로 남겨둡니다.';
+let ptSel=[];
+function ionicFormula(mSym,aSym){const mc=ELEM[mSym].ch,ac=-ELEM[aSym].ch;const g=gcd(mc,ac),nm=ac/g,na=mc/g;return subscriptify(mSym+(nm>1?nm:'')+aSym+(na>1?na:''));}
+function hydroxide(mSym){const c=ELEM[mSym].ch;return subscriptify(c>1?mSym+'(OH)'+c:mSym+'OH');}
+function predictBond(sel){
+  if(sel.some(s=>ELEM[s].cat==='noble'))return {badge:['비활성','#eceef0','#555'],body:'비활성 기체(18족)는 매우 안정해서 보통 다른 원소와 반응해 화합물을 잘 만들지 않아요.'};
+  const metals=sel.filter(s=>ELEM[s].cat==='metal'),nonm=sel.filter(s=>ELEM[s].cat==='nonmetal'),meta=sel.filter(s=>ELEM[s].cat==='metalloid');
+  if(meta.length)return {badge:['경계','#efe8f6','#5b3b8c'],body:`준금속(${meta.map(s=>ELEM[s].kr).join('·')})이 포함돼 결합 성격이 금속과 비금속의 경계에 있어요. 규칙만으로 화학식을 하나로 정하기 어려워요.`};
+  // 2원소
+  if(sel.length===2){
+    if(metals.length===2)return {badge:['금속결합','#e5f2ef','#0F766E'],body:`두 금속(${metals.map(s=>ELEM[s].kr).join('·')})은 자유전자를 공유하는 금속결합을 이뤄요 (섞이면 합금).`};
+    if(metals.length===1&&nonm.length===1){
+      const m=metals[0],a=nonm[0];
+      if(ELEM[a].ch==null)return {badge:['특수','#fbf0dc','#854f0b'],body:`${ELEM[m].kr}과 ${ELEM[a].kr}의 조합은 탄화물·규화물처럼 특수한 경우라 간단한 규칙으로 정하기 어려워요.`};
+      const multi=ELEM[m].multi?` (단, ${ELEM[m].kr}은 여러 전하를 가질 수 있어 다른 화학식도 가능해요)`:'';
+      return {badge:['이온결합','#e5f2ef','#0F766E'],formula:ionicFormula(m,a),body:`금속 ${ELEM[m].kr}(양이온)과 비금속 ${ELEM[a].kr}(음이온)이 전자를 주고받아 이온결합을 해요. 전하 균형으로 화학식이 정해져요.${multi}`};
+    }
+    if(nonm.length===2){
+      const key=sel.slice().sort().join(',');
+      if(COVALENT[key])return {badge:['공유결합','#fbf0dc','#854f0b'],formula:subscriptify(COVALENT[key][0]),body:`두 비금속이 전자를 공유하는 공유결합을 해요. 대표적으로 ${COVALENT[key][1]}.`};
+      return {badge:['공유결합','#fbf0dc','#854f0b'],body:`두 비금속(${nonm.map(s=>ELEM[s].kr).join('·')})은 전자를 공유하는 공유결합을 하지만, 만들어지는 원자 수가 여럿이라 규칙만으로 하나로 정해지지 않아요.`};
+    }
+  }
+  // 3원소
+  if(sel.length===3){
+    if(metals.length===1&&nonm.includes('O')&&nonm.includes('H')&&nonm.length===2)
+      return {badge:['이온결합','#e5f2ef','#0F766E'],formula:hydroxide(metals[0]),body:`금속 ${ELEM[metals[0]].kr}과 수산화 이온(OH⁻)이 이온결합한 수산화물이에요.`};
+    if(metals.length===1&&nonm.length===2){
+      const m=metals[0];const fs=nonm.filter(a=>ELEM[a].ch!=null).map(a=>ionicFormula(m,a));
+      return {badge:['여러 가능','#fbf0dc','#854f0b'],formula:fs.join('  ·  '),body:`금속 하나와 비금속 둘의 조합이라 여러 화합물이 가능해요. 금속과 각 비금속이 만드는 이온결합 화합물은 위와 같고, 세 원소가 함께 든 화합물은 규칙만으로 정하기 어려워요.`};
+    }
+    return {badge:['여러 가능','#fbf0dc','#854f0b'],body:'세 원소 조합은 만들어질 수 있는 화합물이 여러 가지라, 규칙만으로 하나로 정해지지 않아요.'};
+  }
+  return {badge:['안내','#eceef0','#555'],body:'원소를 2개 또는 3개 골라 주세요.'};
+}
+function ptResult(){
+  const box=document.getElementById('ptresult');
+  if(ptSel.length<2){box.innerHTML=`<div style="font-size:13px;color:var(--muted)">고른 원소: ${ptSel.map(s=>ELEM[s].kr+'('+s+')').join(', ')||'없음'} — 2~3개를 골라 주세요.</div>`;return;}
+  const r=predictBond(ptSel);
+  let h=`<div style="font-size:13px;color:var(--muted);margin-bottom:6px">고른 원소: ${ptSel.map(s=>'<b style="color:var(--ink)">'+ELEM[s].kr+'('+s+')</b>').join(' + ')}</div>`;
+  h+=`<span class="bondbadge" style="background:${r.badge[1]};color:${r.badge[2]}">${r.badge[0]}</span>`;
+  if(r.formula)h+=`<div class="bondformula">${r.formula}</div>`;
+  h+=`<div style="font-size:14px;margin-top:6px">${r.body}</div>`;
+  h+=`<div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">${EXT}</div>`;
+  box.innerHTML=h;
+}
+function ptRender(){
+  const g=document.getElementById('ptable');let h='';
+  for(const s in ELEM){const e=ELEM[s];
+    h+=`<button class="el ${e.cat} ${ptSel.includes(s)?'sel':''}" data-s="${s}" style="grid-column:${e.col};grid-row:${e.row}" title="${e.kr}"><span class="num">${e.n}</span><span class="sym">${s}</span></button>`;}
+  g.innerHTML=h;
+  g.querySelectorAll('.el').forEach(b=>b.addEventListener('click',()=>{
+    const s=b.dataset.s;const i=ptSel.indexOf(s);
+    if(i>=0)ptSel.splice(i,1);else{if(ptSel.length>=3)ptSel.shift();ptSel.push(s);}
+    ptRender();ptResult();
+  }));
+}
+ptRender();ptResult();
+
+/* 원소 선택 초기화 */
+document.getElementById('ptReset').addEventListener('click',()=>{ptSel=[];ptRender();ptResult();});
+
+run();
+
+/* 상단 모드 탭 전환 */
+document.querySelectorAll('.modetab').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.modetab').forEach(x=>x.classList.toggle('on',x===b));
+  const m=b.dataset.mode;
+  document.getElementById('mode-reaction').style.display=m==='reaction'?'':'none';
+  document.getElementById('mode-flame').style.display=m==='flame'?'':'none';
+  document.getElementById('mode-elements').style.display=m==='elements'?'':'none';
+}));
+</script>
+</body>
+</html>
