@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>화학 반응 실험실</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Chemical Simulator</title>
 <style>
   :root{
     --bg:#F5F4EF;--surface:#FFFFFF;--ink:#1B2A2A;--muted:#6C776F;--accent:#0F766E;--accent-soft:#E2EFEC;
@@ -16,7 +16,12 @@
     --border:#2B3D3A;--border-strong:#3B504C;--soft:#213230;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  html{background:var(--bg);scroll-behavior:smooth}
+  body{min-height:100svh;margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--accent);color:#fff}
+  button,input{font:inherit;-webkit-tap-highlight-color:transparent}
+  button{touch-action:manipulation}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   .wrap{max-width:960px;margin:0 auto;padding:28px 20px 60px}
   header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:22px}
   header h1{font-size:24px;font-weight:600;margin:0;letter-spacing:-0.01em}
@@ -25,7 +30,7 @@
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:18px}
   .inrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
   .field{display:flex;flex-direction:column;gap:5px}
-  .field label{font-size:12px;color:var(--muted)}
+  .field label{display:inline-flex;align-self:flex-start;align-items:center;font-size:12px;font-weight:600;color:#185FA5;background:#E6F1FB;border-radius:999px;padding:5px 13px}
   .field input{font-family:var(--mono);font-size:16px;padding:9px 11px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);color:var(--ink);width:150px}
   .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .plus{font-size:22px;color:var(--muted);padding-bottom:8px}
@@ -51,6 +56,8 @@
   .idswatch{display:inline-block;width:14px;height:14px;border-radius:4px;flex:0 0 auto;margin-top:2px}
   .ionchip{font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--border-strong)}
   .ionchip em{font-style:normal;color:var(--muted);font-size:11px}
+  .ionchip.colorless{color:#1B2A2A}
+  .ionchip.colorless em{color:#5D6964}
   .indtable{border-collapse:collapse;font-size:12px}
   .indtable td{padding:5px 8px}
   .phbar{position:relative;height:16px;border-radius:8px;background:linear-gradient(90deg,#d9483b,#e9d21f,#3aa03a,#2f6fd0,#5b3b8c)}
@@ -58,7 +65,7 @@
   .stage{display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;align-items:flex-start}
   .vizcol{flex:1 1 340px;display:flex;justify-content:center;align-items:flex-start}
   canvas{background:transparent}
-  .graphbox{flex:1 1 380px;min-width:300px}
+  .graphbox{flex:1 1 380px;min-width:0}
   .graphtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
   .graphtabs button{font-size:12px;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;padding:4px 10px;cursor:pointer;color:var(--muted)}
   .graphtabs button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
@@ -80,7 +87,7 @@
   .ghostbtn:hover{border-color:var(--accent);color:var(--accent)}
   .rxlist{margin-top:14px;border:1px solid var(--border);border-radius:11px;padding:12px 14px;background:var(--soft);max-height:300px;overflow-y:auto}
   .rxgroup{margin-bottom:10px}
-  .rxgroup>.gl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .rxgroup>.gl{display:inline-flex;align-items:center;font-size:13px;color:var(--accent);font-weight:700;background:var(--accent-soft);border-radius:999px;padding:4px 10px;margin-bottom:8px}
   .rxgroup .items{display:flex;flex-wrap:wrap;gap:6px}
   .rxlist .items button{font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:4px 9px;cursor:pointer;color:var(--ink)}
   .rxlist .items button:hover{border-color:var(--accent);color:var(--accent)}
@@ -98,14 +105,61 @@
   .ptlegend i{width:11px;height:11px;border-radius:3px;display:inline-block}
   .bondbadge{display:inline-block;font-size:12px;font-weight:600;padding:5px 13px;border-radius:999px}
   .bondformula{font-family:var(--mono);font-size:22px;color:var(--ink);margin:8px 0}
+  .theme-toggle{margin-left:auto;font-size:12px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);border-radius:8px;padding:4px 12px;cursor:pointer;min-height:32px}
+  .flame-stage{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .flame-info{font-size:14px;flex:1 1 220px}
+  @media (pointer:coarse){
+    .modetab,.run,.ghostbtn{min-height:44px}
+    .examples button,.graphtabs button{min-height:38px}
+  }
+  @media (max-width:767px){
+    .wrap{padding:max(20px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+    header{align-items:flex-start;gap:8px;padding-bottom:12px;margin-bottom:16px}
+    header h1{font-size:clamp(21px,6vw,24px);line-height:1.3}
+    header .sub{order:3;flex-basis:100%;font-size:13px}
+    .theme-toggle{margin-left:auto;min-height:36px}
+    .modetabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:16px}
+    .modetab{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;padding:7px 4px;font-size:clamp(11px,3.4vw,13px);line-height:1.25}
+    .panel{border-radius:12px;padding:16px;margin-bottom:14px}
+    .inrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
+    .inrow .field{grid-column:1/-1;min-width:0 !important}
+    .run,.ghostbtn{width:100%;min-height:44px;padding:9px 10px}
+    .run{font-size:14px}
+    .ghostbtn{font-size:13px;white-space:normal}
+    .hint{font-size:12px;line-height:1.65}
+    .eq{font-size:clamp(16px,5vw,19px);overflow-wrap:anywhere}
+    .idpanel{padding:12px}
+    .idrow{gap:6px}
+    .stage{gap:18px;margin-top:16px}
+    .vizcol,.graphbox{flex-basis:100%;width:100%;min-width:0}
+    .vizcol canvas{width:min(100%,380px);height:auto}
+    .graphbox svg{width:100%;height:auto}
+    .graphtabs{gap:6px}
+    .graphtabs button{flex:1 1 110px;min-height:38px;padding:6px 8px}
+    .legend{max-width:none;gap:7px 10px}
+    .progrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;max-width:none;align-items:center}
+    .progrow #proglabel{grid-column:1/-1}
+    .progrow input[type=range]{width:100%;min-height:32px}
+    .examples{gap:6px}
+    .examples .lbl{flex-basis:100%;min-width:0}
+    .examples button{min-height:38px;padding:6px 10px}
+    .rxlist{max-height:min(50svh,360px);padding:12px}
+    .ptwrap{margin:0 -4px;padding:0 4px 10px;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+    .ptable{min-width:843px;grid-template-columns:repeat(18,44px)}
+    .el{min-height:44px}
+    .ptlegend{gap:8px 10px}
+    .flame-stage{justify-content:center;gap:12px}
+    .flame-info{flex-basis:100%}
+    footer{margin-top:22px;line-height:1.75}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>화학 반응 실험실</h1>
+    <h1>Chemical Simulator</h1>
     <span class="sub">물질을 입력하면 반응을 예측하고 시각화합니다</span>
-    <button id="themeBtn" style="font-size:12px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);border-radius:8px;padding:4px 12px;cursor:pointer">다크 모드</button>
+    <button id="themeBtn" class="theme-toggle">다크 모드</button>
   </header>
 
   <nav class="modetabs" id="modetabs">
@@ -163,9 +217,9 @@
       <button data-m="Li">리튬 Li</button><button data-m="Na">나트륨 Na</button><button data-m="K">칼륨 K</button>
       <button data-m="Ca">칼슘 Ca</button><button data-m="Sr">스트론튬 Sr</button><button data-m="Ba">바륨 Ba</button><button data-m="Cu">구리 Cu</button>
     </div>
-    <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:14px">
+    <div class="flame-stage">
       <svg id="flamesvg" width="120" height="160" viewBox="0 0 120 160" aria-label="불꽃 색"></svg>
-      <div id="flameinfo" style="font-size:14px"></div>
+      <div id="flameinfo" class="flame-info"></div>
     </div>
   </div>
 
@@ -846,7 +900,7 @@ function renderIdPanel(){
   if(R.colorReason)h+=`<div class="idrow"><span class="idswatch" style="background:linear-gradient(90deg,#9cc3ec,#eef1f3)"></span><span><b>${nonAq?'색 변화':'용액 색 변화 이유'}</b> — ${R.colorReason}</span></div>`;
   if(R.heatDelta>0)h+=`<div class="idrow"><span class="idswatch" style="background:#d0453a"></span><span><b>온도 변화</b> — 발열 반응이라 진행되며 온도가 올라감 (오른쪽 온도계와 '온도 변화' 그래프 참고).</span></div>`;
   else h+=`<div class="idrow"><span class="idswatch" style="background:#2f6fd0"></span><span><b>에너지 출입</b> — ${(R.type||'').includes('전기분해')?'전류(전기 에너지)를 계속 공급해야 반응이 진행돼요.':'빛 에너지를 흡수해야 진행되는 흡열 반응이에요.'}</span></div>`;
-  if(!nonAq)h+=`<div class="idrow"><span style="width:14px"></span><span><b>용액 속 이온</b> `+(R.solIons.length?R.solIons.map(io=>`<span class="ionchip" style="background:${io.colorless?'#eef1f3':hexA(io.colHex,0.22)}">${io.disp} <em>${io.colName}</em></span>`).join(' '):'없음')+`</span></div>`;
+  if(!nonAq)h+=`<div class="idrow"><span style="width:14px"></span><span><b>용액 속 이온</b> `+(R.solIons.length?R.solIons.map(io=>`<span class="ionchip${io.colorless?' colorless':''}" style="background:${io.colorless?'#eef1f3':hexA(io.colHex,0.22)}">${io.disp} <em>${io.colName}</em></span>`).join(' '):'없음')+`</span></div>`;
   if(R.use)h+=`<div class="idrow"><span class="idswatch" style="background:#F0EAD6"></span><span><b>실생활 활용</b> — ${R.use}</span></div>`;
   document.getElementById('idpanel').innerHTML=h;
 }
@@ -944,7 +998,7 @@ function dissolveRun(name){
   let h=`<div class="idrow"><span class="idswatch" style="background:#cfe0f5"></span><span><b>물에 녹으면</b> — ${d.note}</span></div>`;
   h+=`<div class="idrow"><span class="idswatch" style="background:${d.solutionType==='산성'?'#e9b7a8':d.solutionType==='염기성'?'#a8c3e9':'#dfe3e0'}"></span><span><b>액성</b> — ${d.solutionType}</span></div>`;
   if(d.colorReason)h+=`<div class="idrow"><span class="idswatch" style="background:linear-gradient(90deg,#9cc3ec,#eef1f3)"></span><span><b>용액 색</b> — ${d.colorReason}</span></div>`;
-  h+=`<div class="idrow"><span style="width:14px"></span><span><b>용액 속 이온</b> `+d.solIons.map(io=>`<span class="ionchip" style="background:${io.colorless?'#eef1f3':hexA(io.colHex,0.22)}">${io.disp} <em>${io.colName}</em></span>`).join(' ')+`</span></div>`;
+  h+=`<div class="idrow"><span style="width:14px"></span><span><b>용액 속 이온</b> `+d.solIons.map(io=>`<span class="ionchip${io.colorless?' colorless':''}" style="background:${io.colorless?'#eef1f3':hexA(io.colHex,0.22)}">${io.disp} <em>${io.colName}</em></span>`).join(' ')+`</span></div>`;
   document.getElementById('idpanel').innerHTML=h;
   R={stage:'beaker',vis:{k:'colorchange'},solIons:d.solIons,mode:'progress',heatDelta:0,noThermo:true,precip:null,gas:null,deposit:null,showIndicator:d.showIndicator,solutionType:d.solutionType};
   progress=1;renderIndicator(1);setupBeaker();if(raf)cancelAnimationFrame(raf);frame();
