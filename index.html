@@ -546,7 +546,20 @@ function finalize(meta,reactants,products){
     if(s.stype==='compound'&&s.soluble){const c=CATIONS[s.catKey],a=ANIONS[s.anKey];const g=gcd(c.ch,a.ch),nc=a.ch/g,na=c.ch/g;
       ions['c:'+s.catKey]=(ions['c:'+s.catKey]||0)+s.coef*nc;ions['a:'+s.anKey]=(ions['a:'+s.anKey]||0)+s.coef*na;}
     else mols.push({name:s.name,coef:s.coef,mark:s.mark});});return {ions,mols};};
-  const L=side(reactants),Rr=side(products);const spectators=[];
+  const L=side(reactants),Rr=side(products);
+  const R0={...Rr.ions};
+  // 어느 반응물이 '원래 비커에 있던 것'이고 어느 쪽이 '나중에 넣는 것'인지 (금속을 넣거나, 기체를 불어넣거나,
+  // 둘 다 수용액이면 나중에 입력한 물질을 넣는 쪽으로 취급) — 비커 쪽은 처음부터 가득, 넣는 쪽은 0에서 시작해 늘어남
+  let addedIdx=reactants.findIndex(s=>s.stype==='metal');
+  if(addedIdx<0)addedIdx=reactants.findIndex(s=>s.stype==='mol');
+  if(addedIdx<0)addedIdx=1;
+  const beaker=reactants[1-addedIdx];
+  const Lbeaker={};
+  if(beaker&&beaker.stype==='compound'&&beaker.soluble){
+    const c=CATIONS[beaker.catKey],a=ANIONS[beaker.anKey];const g=gcd(c.ch,a.ch),nc=a.ch/g,na=c.ch/g;
+    Lbeaker['c:'+beaker.catKey]=beaker.coef*nc;Lbeaker['a:'+beaker.anKey]=beaker.coef*na;
+  }
+  const spectators=[];
   for(const key in L.ions)if(Rr.ions[key]){const c=Math.min(L.ions[key],Rr.ions[key]);L.ions[key]-=c;Rr.ions[key]-=c;if(c>0)spectators.push(key);}
   const ionD=k=>k.startsWith('c:')?catDisp(k.slice(2)):anDisp(k.slice(2));
   const bs=S=>{const t=[];for(const k in S.ions)if(S.ions[k]>0)t.push((S.ions[k]>1?S.ions[k]:'')+ionD(k));S.mols.forEach(mo=>t.push((mo.coef>1?mo.coef:'')+subscriptify(mo.name)+mo.mark));return t;};
@@ -574,7 +587,11 @@ function finalize(meta,reactants,products){
   if(meta.theme==='중화'&&meta.type==='중화')solutionType='titration';
   else if(hasAcid)solutionType='산성';
   const species=all.map(s=>[s.name,s.coef,s.role]);
-  return {ok:true,...meta,eq,ionize,net,spectators:specStr,species,vis:meta.vis,precip,gas,deposit,solIons,salt,water,use,showIndicator,solutionType,stage:'beaker'};
+  // 반응 진행도(= 넣는 쪽을 얼마나 넣었는지)에 따라 늘고 주는 이온 애니메이션용
+  // 초기(0%) = 원래 비커에 있던 쪽의 이온만, 최종(100%) = 반응이 끝난 뒤 남는(생성물 쪽) 이온
+  const ionKeys=[...new Set([...Object.keys(Lbeaker),...Object.keys(R0)])];
+  const ionAnim=ionKeys.map(k=>{const [cn,ch]=ionColor(k);return {key:k,disp:ionD(k),colName:cn,colHex:ch,colorless:cn==='무색',initial:Lbeaker[k]||0,final:R0[k]||0};});
+  return {ok:true,...meta,eq,ionize,net,spectators:specStr,species,vis:meta.vis,precip,gas,deposit,solIons,ionAnim,salt,water,use,showIndicator,solutionType,stage:'beaker'};
 }
 
 /* ================= 그래프 ================= */
@@ -632,7 +649,12 @@ let chips=[],settled=[],bubbles=[],lifeChips=[];
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const lerp=(a,b,t)=>Math.round(a+(b-a)*t);
 function setupBeaker(){
-  chips=[];R.solIons.forEach(io=>{for(let i=0;i<2;i++)chips.push({x:rnd(bx+32,bx+bw-32),y:rnd(ly+16,floorY-24),vx:rnd(-.32,.32),vy:rnd(-.28,.28),io});});
+  chips=[];
+  const ions=R.ionAnim||(R.solIons||[]).map(io=>({...io,initial:1,final:1}));
+  ions.forEach(io=>{
+    const pool=Math.max(2,Math.min(6,Math.round(Math.max(io.initial,io.final))));
+    for(let i=0;i<pool;i++)chips.push({x:rnd(bx+32,bx+bw-32),y:rnd(ly+16,floorY-24),vx:rnd(-.32,.32),vy:rnd(-.28,.28),io,slot:i});
+  });
   settled=[];bubbles=[];lifeChips=[];
   if(R.vis.k==='precip'||R.vis.k==='displace'){let n=0;for(let row=0;row<9&&n<54;row++)for(let k=0;k<9&&n<54;k++){settled.push({x:bx+8+k*11+(row%2?5:0),y:floorY-4-row*7});n++;}}
   if(R.stage==='life'){
@@ -685,7 +707,10 @@ function drawBeaker(){
   if(R.vis.k==='precip'||R.vis.k==='displace'){ctx.fillStyle=R.vis.c;const show=Math.floor(progress*settled.length);for(let i=0;i<show;i++){ctx.beginPath();ctx.arc(settled[i].x,settled[i].y,3.5,0,7);ctx.fill();}}
   if(R.vis.k==='gas'){if(Math.random()<progress*0.45)bubbles.push({x:rnd(bx+12,bx+bw-12),y:floorY-6,r:rnd(1.5,3.5)});
     ctx.fillStyle=R.vis.c;ctx.strokeStyle='rgba(150,150,150,0.5)';bubbles.forEach(b=>{b.y-=1.6;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill();ctx.stroke();});bubbles=bubbles.filter(b=>b.y>ly);}
-  chips.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<bx+28||p.x>bx+bw-28)p.vx*=-1;if(p.y<ly+14||p.y>floorY-22)p.vy*=-1;chip(p.x,p.y,p.io.disp,p.io.colHex,p.io.colorless);});
+  chips.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<bx+28||p.x>bx+bw-28)p.vx*=-1;if(p.y<ly+14||p.y>floorY-22)p.vy*=-1;
+    const io=p.io,maxAmt=Math.max(io.initial,io.final),pool=Math.max(2,Math.min(6,Math.round(maxAmt)));
+    const amtNow=io.initial+(io.final-io.initial)*progress,visCount=maxAmt>0?Math.round((amtNow/maxAmt)*pool):0;
+    if(p.slot<visCount)chip(p.x,p.y,p.io.disp,p.io.colHex,p.io.colorless);});
   ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.font='12px '+getComputedStyle(document.body).fontFamily;ctx.fillStyle='#1B2A2A';
   if(R.precip&&progress>0.02)ctx.fillText('바닥 침전 = '+R.precip.name+' 앙금',bx+bw/2,floorY+18);
   else if(R.deposit&&progress>0.02)ctx.fillText('바닥·표면 = '+R.deposit.name+' 금속 석출',bx+bw/2,floorY+18);
@@ -1014,7 +1039,19 @@ const ELEM={
   Rb:{n:37,kr:'루비듐',col:1,row:5,cat:'metal',ch:1},Sr:{n:38,kr:'스트론튬',col:2,row:5,cat:'metal',ch:2},Ag:{n:47,kr:'은',col:11,row:5,cat:'metal',ch:1},Sn:{n:50,kr:'주석',col:14,row:5,cat:'metal',ch:2,multi:1},I:{n:53,kr:'아이오딘',col:17,row:5,cat:'nonmetal',ch:-1},Xe:{n:54,kr:'제논',col:18,row:5,cat:'noble',ch:null},
   Cs:{n:55,kr:'세슘',col:1,row:6,cat:'metal',ch:1},Ba:{n:56,kr:'바륨',col:2,row:6,cat:'metal',ch:2},Pb:{n:82,kr:'납',col:14,row:6,cat:'metal',ch:2,multi:1},
 };
-const COVALENT={'H,O':['H₂O','물 (H₂O₂ 같은 다른 화합물도 가능)'],'H,N':['NH₃','암모니아'],'C,H':['CH₄','메테인 (C₂H₆·C₂H₄ 등 수많은 탄화수소가 가능)'],'Cl,H':['HCl','염화수소'],'H,S':['H₂S','황화수소'],'F,H':['HF','플루오린화수소'],'Br,H':['HBr','브로민화수소'],'H,I':['HI','아이오딘화수소'],'C,O':['CO₂','이산화탄소 (CO도 가능)'],'N,O':['NO₂','이산화질소 (NO·N₂O 등 여러 산화물 가능)'],'O,S':['SO₂','이산화황 (SO₃도 가능)'],'Cl,Cl':['Cl₂','염소 분자'],'O,O':['O₂','산소 분자'],'H,H':['H₂','수소 분자'],'N,N':['N₂','질소 분자'],'O,P':['P₂O₅','오산화이인']};
+const COVALENT={'H,O':['H₂O','물 (H₂O₂ 같은 다른 화합물도 가능)'],'H,N':['NH₃','암모니아'],'C,H':['CH₄','메테인 (C₂H₆·C₂H₄ 등 수많은 탄화수소가 가능)'],'Cl,H':['HCl','염화수소'],'H,S':['H₂S','황화수소'],'F,H':['HF','플루오린화수소'],'Br,H':['HBr','브로민화수소'],'H,I':['HI','아이오딘화수소'],'C,O':['CO₂','이산화탄소 (CO도 가능)'],'N,O':['NO₂','이산화질소 (NO·N₂O 등 여러 산화물 가능)'],'O,S':['SO₂','이산화황 (SO₃도 가능)'],'Cl,Cl':['Cl₂','염소 분자'],'O,O':['O₂','산소 분자'],'H,H':['H₂','수소 분자'],'N,N':['N₂','질소 분자'],'O,P':['P₂O₅','오산화이인'],
+  'F,F':['F₂','플루오린 분자'],'Br,Br':['Br₂','브로민 분자'],'I,I':['I₂','아이오딘 분자'],
+  'H,P':['PH₃','포스핀'],'H,Se':['H₂Se','셀레늄화수소'],
+  'C,F':['CF₄','사플루오린화탄소'],'C,S':['CS₂','이황화탄소'],'C,Cl':['CCl₄','사염화탄소'],'Br,C':['CBr₄','사브로민화탄소'],
+  'F,N':['NF₃','삼플루오린화질소'],'Cl,N':['NCl₃','삼염화질소'],
+  'F,O':['OF₂','이플루오린화산소'],'O,Se':['SeO₂','이산화셀레늄'],
+  'F,P':['PF₃','삼플루오린화인'],'F,S':['SF₆','육플루오린화황'],'Cl,F':['ClF','일염화플루오린'],'Br,F':['BrF₃','삼플루오린화브로민'],
+  'Cl,P':['PCl₃','삼염화인'],'Br,P':['PBr₃','삼브로민화인'],'I,P':['PI₃','삼아이오딘화인'],
+  'Cl,S':['SCl₂','이염화황'],'Br,Cl':['BrCl','일염화브로민'],'Cl,I':['ICl','일염화아이오딘'],'Br,I':['IBr','일브로민화아이오딘'],
+  'O,Si':['SiO₂','이산화규소(석영·모래)'],'Cl,Si':['SiCl₄','사염화규소'],'F,Si':['SiF₄','사플루오린화규소'],'H,Si':['SiH₄','실레인'],'Br,Si':['SiBr₄','사브로민화규소'],
+  'B,F':['BF₃','삼플루오린화붕소'],'B,Cl':['BCl₃','삼염화붕소'],'B,Br':['BBr₃','삼브로민화붕소'],'B,O':['B₂O₃','삼산화이붕소'],
+  'Cl,Ge':['GeCl₄','사염화저마늄'],'Ge,O':['GeO₂','이산화저마늄'],'F,Ge':['GeF₄','사플루오린화저마늄'],'Ge,H':['GeH₄','저메인'],
+  'As,O':['As₂O₃','삼산화이비소'],'As,Cl':['AsCl₃','삼염화비소'],'As,F':['AsF₃','삼플루오린화비소'],'As,H':['AsH₃','아르신']};
 const EXT='※ 이 도구는 규칙이 명확한 이온결합과 대표적인 공유결합만 예측해요. 공유결합의 정확한 원자 수, 3원소 이상의 복잡한 화합물, 유기물(탄소 화합물)은 규칙만으로 하나로 정해지지 않아, 앞으로 심화 학습(분자 구조·결합수)으로 확장할 과제로 남겨둡니다.';
 let ptSel=[];
 function ionicFormula(mSym,aSym){const mc=ELEM[mSym].ch,ac=-ELEM[aSym].ch;const g=gcd(mc,ac),nm=ac/g,na=mc/g;return subscriptify(mSym+(nm>1?nm:'')+aSym+(na>1?na:''));}
@@ -1052,7 +1089,7 @@ function shellDiagram(sym){
 }
 function ionicTransferSVG(m,a){
   const em=ELEM[m],ea=ELEM[a],W=380,Hh=210,cy=88,mx=98,ax=282,R=38;
-  const mc=em.ch,va=valence(ea)||6;
+  const mc=em.ch,aCharge=ea.ch??-1,va=valence(ea)||6;
   let s=`<svg width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}">`;
   s+=`<circle cx="${mx}" cy="${cy}" r="${R}" fill="none" stroke="var(--border-strong)"/><circle cx="${ax}" cy="${cy}" r="${R}" fill="none" stroke="var(--border-strong)"/>`;
   const dot=(x,cnt,col)=>{let g='';for(let k=0;k<cnt;k++){const ang=-Math.PI/2+2*Math.PI*k/Math.max(cnt,1);g+=`<circle cx="${(x+R*Math.cos(ang)).toFixed(1)}" cy="${(cy+R*Math.sin(ang)).toFixed(1)}" r="3" fill="${col}"/>`;}return g;};
@@ -1064,7 +1101,7 @@ function ionicTransferSVG(m,a){
   s+=`<circle r="4" fill="#c0392b"><animateMotion dur="1.7s" repeatCount="indefinite"><mpath href="#${pid}"/></animateMotion></circle>`;
   s+=`<text x="${(mx+ax)/2}" y="${cy-50}" text-anchor="middle" font-size="11" fill="#c0392b">전자 ${mc}개 이동</text>`;
   s+=`<text x="${mx}" y="${cy+R+30}" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">${m}<tspan baseline-shift="super" font-size="10">+${mc}</tspan></text>`;
-  s+=`<text x="${ax}" y="${cy+R+30}" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">${a}<tspan baseline-shift="super" font-size="10">−${Math.abs(ea.ch)}</tspan></text>`;
+  s+=`<text x="${ax}" y="${cy+R+30}" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">${a}<tspan baseline-shift="super" font-size="10">−${Math.abs(aCharge)}</tspan></text>`;
   s+=`</svg>`;return s;
 }
 const MOLG={
@@ -1116,20 +1153,29 @@ function ionAttractSVG(catSym,poly){
 function predictBond(sel){
   if(sel.some(s=>ELEM[s].cat==='noble'))return {badge:['비활성','#eceef0','#555'],body:'비활성 기체(18족)는 매우 안정해서 보통 다른 원소와 반응해 화합물을 잘 만들지 않아요.'};
   const metals=sel.filter(s=>ELEM[s].cat==='metal'),nonm=sel.filter(s=>ELEM[s].cat==='nonmetal'),meta=sel.filter(s=>ELEM[s].cat==='metalloid');
-  if(meta.length)return {badge:['경계','#efe8f6','#5b3b8c'],body:`준금속(${meta.map(s=>ELEM[s].kr).join('·')})이 포함돼 결합 성격이 금속과 비금속의 경계에 있어요. 규칙만으로 화학식을 하나로 정하기 어려워요.`};
   // 2원소
   if(sel.length===2){
     if(metals.length===2)return {badge:['금속결합','#e5f2ef','#0F766E'],body:`두 금속(${metals.map(s=>ELEM[s].kr).join('·')})은 자유전자를 공유하는 금속결합을 이뤄요 (섞이면 합금).`};
+    if(metals.length===1&&meta.length===1)
+      return {badge:['경계','#efe8f6','#5b3b8c'],body:`금속과 준금속(${ELEM[meta[0]].kr})의 화합물(규화물 등)은 복잡한 경우가 많아 규칙만으로 정하기 어려워요.`};
+    if(meta.length===2)
+      return {badge:['경계','#efe8f6','#5b3b8c'],body:`준금속끼리(${meta.map(s=>ELEM[s].kr).join('·')})의 화합물은 드물고 복잡해 규칙만으로 정하기 어려워요.`};
     if(metals.length===1&&nonm.length===1){
       const m=metals[0],a=nonm[0];
-      if(ELEM[a].ch==null)return {badge:['특수','#fbf0dc','#854f0b'],body:`${ELEM[m].kr}과 ${ELEM[a].kr}의 조합은 탄화물·규화물처럼 특수한 경우라 간단한 규칙으로 정하기 어려워요.`};
+      if(a==='H'){
+        const c=ELEM[m].ch;
+        return {badge:['이온결합','#e5f2ef','#0F766E'],formula:subscriptify(c>1?m+'H'+c:m+'H'),
+          body:`금속 ${ELEM[m].kr}이 전자를 잃어 양이온이 되고, 수소가 전자를 얻어 수소화 이온(H⁻)이 되는 이온결합(이온성 수소화물)이에요.`};
+      }
+      if(ELEM[a].ch==null)return {badge:['특수','#fbf0dc','#854f0b'],body:`${ELEM[m].kr}과 ${ELEM[a].kr}의 조합은 탄화물처럼 특수한 경우라 간단한 규칙으로 정하기 어려워요.`};
       const multi=ELEM[m].multi?` (단, ${ELEM[m].kr}은 여러 전하를 가질 수 있어 다른 화학식도 가능해요)`:'';
       return {badge:['이온결합','#e5f2ef','#0F766E'],formula:ionicFormula(m,a),body:`금속 ${ELEM[m].kr}(양이온)과 비금속 ${ELEM[a].kr}(음이온)이 전자를 주고받아 이온결합을 해요. 전하 균형으로 화학식이 정해져요.${multi}`};
     }
-    if(nonm.length===2){
+    if(metals.length===0&&(nonm.length+meta.length)===2){
       const key=sel.slice().sort().join(',');
-      if(COVALENT[key])return {badge:['공유결합','#fbf0dc','#854f0b'],formula:subscriptify(COVALENT[key][0]),body:`두 비금속이 전자를 공유하는 공유결합을 해요. 대표적으로 ${COVALENT[key][1]}.`};
-      return {badge:['공유결합','#fbf0dc','#854f0b'],body:`두 비금속(${nonm.map(s=>ELEM[s].kr).join('·')})은 전자를 공유하는 공유결합을 하지만, 만들어지는 원자 수가 여럿이라 규칙만으로 하나로 정해지지 않아요.`};
+      const names=sel.map(s=>ELEM[s].kr).join('·');
+      if(COVALENT[key])return {badge:['공유결합','#fbf0dc','#854f0b'],formula:subscriptify(COVALENT[key][0]),body:`두 원소가 전자를 공유하는 공유결합을 해요. 대표적으로 ${COVALENT[key][1]}.`};
+      return {badge:['공유결합','#fbf0dc','#854f0b'],body:`두 원소(${names})는 전자를 공유하는 공유결합을 하지만, 만들어지는 원자 수가 여럿이라 규칙만으로 하나로 정해지지 않아요.`};
     }
   }
   // 3원소
